@@ -1,0 +1,15 @@
+{
+  "name": "flexbrowser",
+  "version": "1.0.0",
+  "description": "Electron-based desktop browser with independent sessions",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "electron": "*"
+  }
+}
