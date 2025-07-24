@@ -1,0 +1,15 @@
+html, body {
+  background-color: #f6f6f0;
+}
+@tailwind base;
+/* Hide all scrollbars across app */
+html, body, * {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+@tailwind components;
+@tailwind utilities;

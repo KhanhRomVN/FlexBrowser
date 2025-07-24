@@ -1,0 +1,248 @@
+{
+  "bandScores": {
+    "overall": 6.5,
+    "TR": 7,
+    "CC": 6,
+    "LR": 6.5,
+    "GRA": 5.5
+  },
+  "errors": [
+    {
+      "ID": 1,
+      "Type": "grammar",
+      "Original": "In recent yearss",
+      "Corrected": "In recent years",
+      "Explanation": "plural noun error",
+      "Level": "word"
+    },
+    {
+      "ID": 2,
+      "Type": "vocabulary",
+      "Original": "there is growing debates",
+      "Corrected": "there are growing debates",
+      "Explanation": "subject verb agreement",
+      "Level": "word"
+    },
+    {
+      "ID": 3,
+      "Type": "spelling",
+      "Original": "servise",
+      "Corrected": "service",
+      "Explanation": "spelling error",
+      "Level": "word"
+    },
+    {
+      "ID": 4,
+      "Type": "vocabulary",
+      "Original": "helping eldery",
+      "Corrected": "helping the elderly",
+      "Explanation": "article missing",
+      "Level": "word"
+    },
+    {
+      "ID": 5,
+      "Type": "spelling",
+      "Original": "mandetory",
+      "Corrected": "mandatory",
+      "Explanation": "spelling error",
+      "Level": "word"
+    },
+    {
+      "ID": 6,
+      "Type": "vocabulary",
+      "Original": "it optional",
+      "Corrected": "it is optional",
+      "Explanation": "verb missing",
+      "Level": "word"
+    },
+    {
+      "ID": 7,
+      "Type": "vocabulary",
+      "Original": "I strongly agree integrate",
+      "Corrected": "I strongly agree that integrating",
+      "Explanation": "missing conjunction",
+      "Level": "word"
+    },
+    {
+      "ID": 8,
+      "Type": "spelling",
+      "Original": "programms",
+      "Corrected": "programmes",
+      "Explanation": "spelling error",
+      "Level": "word"
+    },
+    {
+      "ID": 9,
+      "Type": "grammar",
+      "Original": "benefit for students and society as whole",
+      "Corrected": "benefit for students and society as a whole",
+      "Explanation": "missing article",
+      "Level": "word"
+    },
+    {
+      "ID": 10,
+      "Type": "spelling",
+      "Original": "Firstty",
+      "Corrected": "Firstly",
+      "Explanation": "spelling error",
+      "Level": "word"
+    },
+    {
+      "ID": 11,
+      "Type": "vocabulary",
+      "Original": "lifes skills",
+      "Corrected": "life skills",
+      "Explanation": "missing space",
+      "Level": "word"
+    },
+    {
+      "ID": 12,
+      "Type": "vocabulary",
+      "Original": "academical",
+      "Corrected": "academic",
+      "Explanation": "wrong word form",
+      "Level": "word"
+    },
+    {
+      "ID": 13,
+      "Type": "vocabulary",
+      "Original": "Participating in voluntar work",
+      "Corrected": "Participating in voluntary work",
+      "Explanation": "wrong word",
+      "Level": "word"
+    },
+    {
+      "ID": 14,
+      "Type": "spelling",
+      "Original": "comunication",
+      "Corrected": "communication",
+      "Explanation": "spelling error",
+      "Level": "word"
+    },
+    {
+      "ID": 15,
+      "Type": "vocabulary",
+      "Original": "clean up campains",
+      "Corrected": "clean-up campaigns",
+      "Explanation": "wrong word",
+      "Level": "word"
+    },
+    {
+      "ID": 16,
+      "Type": "grammar",
+      "Original": "encourages them take initiative.",
+      "Corrected": "encourages them to take initiative.",
+      "Explanation": "missing 'to'",
+      "Level": "word"
+    },
+    {
+      "ID": 17,
+      "Type": "grammar",
+      "Original": "prepare they better",
+      "Corrected": "prepare them better",
+      "Explanation": "pronoun error",
+      "Level": "word"
+    },
+    {
+      "ID": 18,
+      "Type": "vocabulary",
+      "Original": "Opponents might argued that",
+      "Corrected": "Opponents might argue that",
+      "Explanation": "verb tense error",
+      "Level": "word"
+    },
+    {
+      "ID": 19,
+      "Type": "grammar",
+      "Original": "guidenc",
+      "Corrected": "guidance",
+      "Explanation": "spelling error",
+      "Level": "word"
+    },
+    {
+      "ID": 20,
+      "Type": "vocabulary",
+      "Original": "programs match students",
+      "Corrected": "programs that match students'",
+      "Explanation": "missing relative pronoun",
+      "Level": "word"
+    },
+    {
+      "ID": 21,
+      "Type": "vocabulary",
+      "Original": "volunteers at rescue centre",
+      "Corrected": "volunteer at a rescue centre",
+      "Explanation": "article missing",
+      "Level": "word"
+    },
+    {
+      "ID": 22,
+      "Type": "vocabulary",
+      "Original": "tutter younger children.",
+      "Corrected": "tutor younger children.",
+      "Explanation": "wrong word",
+      "Level": "word"
+    },
+    {
+      "ID": 23,
+      "Type": "grammar",
+      "Original": "i firmely believe",
+      "Corrected": "I firmly believe",
+      "Explanation": "spelling error",
+      "Level": "word"
+    },
+    {
+      "ID": 24,
+      "Type": "vocabulary",
+      "Original": "highschool",
+      "Corrected": "high school",
+      "Explanation": "spacing error",
+      "Level": "word"
+    },
+    {
+      "ID": 25,
+      "Type": "vocabulary",
+      "Original": "lifeskills",
+      "Corrected": "life skills",
+      "Explanation": "spacing error",
+      "Level": "word"
+    },
+    {
+      "ID": 26,
+      "Type": "vocabulary",
+      "Original": "It help develop",
+      "Corrected": "It helps develop",
+      "Explanation": "subject verb agreement",
+      "Level": "word"
+    },
+    {
+      "ID": 27,
+      "Type": "vocabulary",
+      "Original": "Rather than viewing it as burden",
+      "Corrected": "Rather than viewing it as a burden",
+      "Explanation": "missing article",
+      "Level": "word"
+    },
+    {
+      "ID": 28,
+      "Type": "vocabulary",
+      "Original": "investement",
+      "Corrected": "investment",
+      "Explanation": "spelling error",
+      "Level": "word"
+    }
+  ],
+  "annotatedText": "In recent <ERR id=\"1\" type=\"grammar\">yearss</ERR> there <ERR id=\"2\" type=\"vocabulary\">is growing debates</ERR> about whether unpaid community <ERR id=\"3\" type=\"spelling\">servise</ERR> such as volunteering <ERR id=\"4\" type=\"vocabulary\">helping eldery</ERR>, or cleaning public areas should be <ERR id=\"5\" type=\"spelling\">mandetory</ERR> part of high school education. While some <ERR id=\"6\" type=\"vocabulary\">it optional</ERR>, <ERR id=\"7\" type=\"vocabulary\">I strongly agree integrate</ERR> community service into school <ERR id=\"8\" type=\"spelling\">programms</ERR> offers significant educational and social <ERR id=\"9\" type=\"grammar\">benefit for students and society as whole</ERR>. \n\n<ERR id=\"10\" type=\"spelling\">Firstty</ERR>, mandatory community service equip students with essential <ERR id=\"11\" type=\"vocabulary\">lifes skills</ERR> that <ERR id=\"12\" type=\"vocabulary\">academical</ERR> subjects often overlook. <ERR id=\"13\" type=\"vocabulary\">Participating in voluntar work</ERR> foster empathy, teamwork <ERR id=\"14\" type=\"spelling\">comunication</ERR> and a sense of responsibility. For instance, helping at a shelter or organising local <ERR id=\"15\" type=\"vocabulary\">clean up campains</ERR> expose students to real world problmes and <ERR id=\"16\" type=\"grammar\">encourages them take initiative.</ERR> These experiences not only make students more well rounded individuals but also <ERR id=\"17\" type=\"grammar\">prepare they better</ERR> for the challenges of adult life.\n\nOpponents <ERR id=\"18\" type=\"vocabulary\">might argued that</ERR> forcing students to volunteer could lead them to resentment and superficial engagement. However with proper planning and <ERR id=\"19\" type=\"grammar\">guidenc</ERR>, schools can design <ERR id=\"20\" type=\"vocabulary\">programs match students</ERR> interest and strengths. For example, a student passionate about animals could <ERR id=\"21\" type=\"vocabulary\">volunteers at rescue centre</ERR>, while another interested in education could help <ERR id=\"22\" type=\"vocabulary\">tutter</ERR> younger children. When students see the value in what they are doing, motivation naturally follows.\n\nIn conclusion, <ERR id=\"23\" type=\"grammar\">i firmely believe</ERR> incorporating community service into <ERR id=\"24\" type=\"vocabulary\">highschool</ERR> programmes bring numerous longterm benefits. It <ERR id=\"26\" type=\"vocabulary\">help develop</ERR> essential <ERR id=\"25\" type=\"vocabulary\">lifeskills</ERR>, foster civic responsibility and promote a strong connection between youth and society. <ERR id=\"27\" type=\"vocabulary\">Rather than viewing it as burden</ERR>, we should see it as an <ERR id=\"28\" type=\"vocabulary\">investement</ERR> in building a more compassionate and engaged generation. Furthermore, this policy cultivates leadership and interpersonal skills.\nIt also improves critical thinking abilities.\nMoreover, it encourages time management and problem-solving skills.",
+  "overallFeedback": "- Focus on improving grammatical accuracy, especially subject-verb agreement and article usage.\n- Enhance coherence by using a wider range of linking words and phrases.\n- Proofread carefully to eliminate spelling errors.",
+  "vocabularyHighlights": [
+    "civic responsibility",
+    "compassionate",
+    "engaged generation",
+    "well-rounded individuals"
+  ],
+  "sentenceDiversifications": [
+    "While some people argue it is optional, I strongly believe that integrating community service into school programmes offers significant educational and social benefits for students and society as a whole.",
+    "Rather than viewing it as a burden, we should consider it an investment in cultivating a more compassionate and engaged generation."
+  ],
+  "sampleEssays": []
+}
