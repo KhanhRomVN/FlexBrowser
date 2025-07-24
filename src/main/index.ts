@@ -17,15 +17,14 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       nodeIntegration: true,
-      contextIsolation: false
+      contextIsolation: false,
+      enableRemoteModule: true,
+      webviewTag: true
     }
   })
 
   mainWindow.on('ready-to-show', () => {
-    // Chỉ hiện cửa sổ khi là PROD (khi DEV sẽ không show window)
-    if (process.env.ENV === 'PROD') {
-      mainWindow?.show()
-    }
+    mainWindow?.show()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {

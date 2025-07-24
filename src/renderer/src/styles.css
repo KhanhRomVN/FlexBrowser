@@ -1,5 +1,8 @@
-html, body {
+html, body, #root {
   background-color: #f6f6f0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
 }
 @tailwind base;
 /* Hide all scrollbars across app */
