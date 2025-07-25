@@ -73,10 +73,26 @@ app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.electron')
   createWindow()
 
-  // Toggle visibility with Ctrl+Shift+X
+  // Toggle visibility with Alt+Shift+X
+  globalShortcut.register('Alt+Shift+X', () => {
+    if (mainWindow) {
+      if (mainWindow.isVisible()) {
+        mainWindow.hide()
+      } else {
+        mainWindow.show()
+        mainWindow.focus()
+      }
+    }
+  })
+  // Also toggle visibility with Ctrl+Shift+X
   globalShortcut.register('Control+Shift+X', () => {
     if (mainWindow) {
-      mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show()
+      if (mainWindow.isVisible()) {
+        mainWindow.hide()
+      } else {
+        mainWindow.show()
+        mainWindow.focus()
+      }
     }
   })
 

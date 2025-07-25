@@ -28,6 +28,7 @@ interface AccountState {
   addTab: (accountId: string, tab: Tab) => void
   setActiveTab: (accountId: string, tabId: string) => void
   deleteAccount: (id: string) => void
+  deleteTab: (accountId: string, tabId: string) => void
   renameAccount: (id: string, name: string) => void
 }
 
@@ -62,13 +63,27 @@ const useAccountStore = create<AccountState>()(
             acc.id === accountId ? { ...acc, activeTabId: tabId } : acc
           )
         })),
-      deleteAccount: (id: string) =>
+      deleteAccount: (id) =>
         set((state) => {
           const accounts = state.accounts.filter((acc) => acc.id !== id)
           const activeAccountId = state.activeAccountId === id ? null : state.activeAccountId
           return { accounts, activeAccountId }
         }),
-      renameAccount: (id: string, name: string) =>
+      deleteTab: (accountId, tabId) =>
+        set((state) => ({
+          accounts: state.accounts.map((acc) => {
+            if (acc.id !== accountId) return acc
+            const newTabs = acc.tabs.filter((tab) => tab.id !== tabId)
+            let newActiveTabId = acc.activeTabId
+            if (acc.activeTabId === tabId && newTabs.length > 0) {
+              newActiveTabId = newTabs[newTabs.length - 1].id
+            } else if (newTabs.length === 0) {
+              newActiveTabId = null
+            }
+            return { ...acc, tabs: newTabs, activeTabId: newActiveTabId }
+          })
+        })),
+      renameAccount: (id, name) =>
         set((state) => ({
           accounts: state.accounts.map((acc) => (acc.id === id ? { ...acc, name } : acc))
         }))
