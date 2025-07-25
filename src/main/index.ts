@@ -1,74 +1,86 @@
 import * as dotenv from 'dotenv'
 dotenv.config()
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+
+import { app, shell, BrowserWindow, ipcMain, screen, globalShortcut } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
 let mainWindow: BrowserWindow | null = null
 
 function createWindow(): void {
-  // Create the browser window.
-  mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
+  const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize
+  const width = Math.floor(screenWidth * 0.3)
+  const height = screenHeight
+  const x = screenWidth - width
+  const y = 0
+
+  const win = new BrowserWindow({
+    x,
+    y,
+    width,
+    height,
+    frame: false,
+    movable: false,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
     show: false,
     autoHideMenuBar: true,
+    alwaysOnTop: true,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       nodeIntegration: true,
       contextIsolation: false,
-      enableRemoteModule: true,
       webviewTag: true
     }
   })
 
-  mainWindow.on('ready-to-show', () => {
-    mainWindow?.show()
+  // Prevent any move attempts
+  win.on('will-move', (event) => {
+    event.preventDefault()
   })
 
-  mainWindow.webContents.setWindowOpenHandler((details) => {
+  // Snap back if moved
+  win.on('move', () => {
+    win.setPosition(x, y)
+  })
+
+  // Open external links in default browser
+  win.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
   })
 
-  // HMR for renderer base on electron-vite cli.
-  // Load the remote URL for development or the local html file for production.
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
-    // mainWindow.webContents.openDevTools() // Disable default, handle below
-
-    // Enable auto-reload in development
-    mainWindow.webContents.on('did-fail-load', () => {
-      if (mainWindow) {
-        mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] as string)
-      }
+  if (is.dev && process.env.ELECTRON_RENDERER_URL) {
+    win.loadURL(process.env.ELECTRON_RENDERER_URL as string)
+    win.webContents.on('did-fail-load', () => {
+      win.loadURL(process.env.ELECTRON_RENDERER_URL as string)
     })
-    // Ensure focus stays on code editor during hot reload in dev.
-    if (is.dev && mainWindow) {
-      mainWindow.webContents.on('did-finish-load', () => {
-        if (mainWindow) {
-          mainWindow.blur()
-          // Open DevTools in detached mode so Electron does not steal focus!
-          mainWindow.webContents.openDevTools({ mode: 'detach' })
-        }
-      })
-    }
+    win.webContents.on('did-finish-load', () => {
+      win.blur()
+      win.webContents.openDevTools({ mode: 'detach' })
+    })
   } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+    win.loadFile(join(__dirname, '../renderer/index.html'))
   }
+
+  mainWindow = win
 }
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
-  // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
+  createWindow()
 
-  // Default open or close DevTools by F12 in development
-  // and ignore CommandOrControl + R in production.
-  // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
+  // Toggle visibility with Ctrl+Shift+X
+  globalShortcut.register('Control+Shift+X', () => {
+    if (mainWindow) {
+      mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show()
+    }
+  })
+
+  // DevTools & reload shortcuts
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
@@ -76,33 +88,22 @@ app.whenReady().then(() => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
-  createWindow()
-
-  // Hot reload in development
-  if (is.dev) {
-    app.on('activate', () => {
-      if (mainWindow === null) createWindow()
-    })
-
-    if (mainWindow) {
-      mainWindow.webContents.on('destroyed', () => {
-        mainWindow = null
-      })
-    }
-  }
-
-  app.on('activate', function () {
-    // On macOS it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+  // macOS: recreate window on activate
+  app.on('activate', () => {
+    if (!mainWindow) createWindow()
   })
 })
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
+    globalShortcut.unregisterAll()
     app.quit()
+  }
+})
+
+// Fallback: ensure window on activate on all platforms
+app.on('activate', () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow()
   }
 })
