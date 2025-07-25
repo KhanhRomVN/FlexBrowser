@@ -63,12 +63,12 @@ const BottomSidebar: React.FC = () => {
 
   return (
     <>
-      <div className="fixed bottom-0 left-0 right-0 h-16 bg-background border-t flex items-center justify-between px-4">
+      <div className="fixed bottom-0 left-0 right-0 h-14 bg-background border-t flex items-center justify-between px-3">
         <div className="flex items-center space-x-2 overflow-x-auto scrollbar-hide flex-1">
           {accounts.slice(0, 10).map((acc) => (
             <Avatar
               key={acc.id}
-              className={`w-10 h-10 cursor-pointer transition-transform ${
+              className={`w-8 h-8 rounded-[8px] cursor-pointer transition-transform ${
                 activeAccountId === acc.id
                   ? 'ring-2 ring-primary scale-110'
                   : 'opacity-80 hover:opacity-100'
@@ -82,7 +82,7 @@ const BottomSidebar: React.FC = () => {
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="rounded-[8px]">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="h-6 w-6"
@@ -102,13 +102,13 @@ const BottomSidebar: React.FC = () => {
           <DropdownMenuContent className="w-64 max-h-96 overflow-y-auto">
             <div className="px-3 py-2 font-semibold">Accounts Manager</div>
             {accounts.map((acc, idx) => (
-              <div
+              <DropdownMenuItem
                 key={acc.id}
                 className="flex items-center justify-between px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 <div className="flex items-center">
                   <span className="w-6 text-gray-500">{idx + 1}.</span>
-                  <Avatar className="w-8 h-8 mx-2">
+                  <Avatar className="w-8 h-8 mx-2 rounded-[8px]">
                     <AvatarImage src={acc.avatarUrl} alt={acc.name} />
                     <AvatarFallback>{acc.name.charAt(0)}</AvatarFallback>
                   </Avatar>
@@ -122,7 +122,12 @@ const BottomSidebar: React.FC = () => {
                 <div className="flex space-x-1">
                   {activeAccountId !== acc.id && (
                     <>
-                      <Button variant="ghost" size="icon" onClick={() => deleteAccount(acc.id)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="rounded-[8px]"
+                        onClick={() => deleteAccount(acc.id)}
+                      >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           className="h-4 w-4"
@@ -136,7 +141,12 @@ const BottomSidebar: React.FC = () => {
                           />
                         </svg>
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setActiveAccount(acc.id)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="rounded-[8px]"
+                        onClick={() => setActiveAccount(acc.id)}
+                      >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           className="h-4 w-4"
@@ -154,7 +164,7 @@ const BottomSidebar: React.FC = () => {
                     </>
                   )}
                 </div>
-              </div>
+              </DropdownMenuItem>
             ))}
             <DialogTrigger asChild>
               <DropdownMenuItem className="cursor-pointer" onSelect={(e) => e.preventDefault()}>
@@ -194,7 +204,9 @@ const BottomSidebar: React.FC = () => {
             </label>
           </div>
           <DialogFooter>
-            <Button onClick={confirmAdd}>Add Account</Button>
+            <Button onClick={confirmAdd} className="rounded-[8px]">
+              Add Account
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
