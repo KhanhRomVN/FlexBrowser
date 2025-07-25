@@ -42,7 +42,7 @@ function createWindow(): void {
     event.preventDefault()
   })
 
-  // Snap back if moved
+  // Snap back if movedX
   win.on('move', () => {
     win.setPosition(x, y)
   })
