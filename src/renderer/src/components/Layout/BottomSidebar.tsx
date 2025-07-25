@@ -62,7 +62,7 @@ const BottomSidebar: React.FC = () => {
   }
 
   return (
-    <>
+    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <div className="fixed bottom-0 left-0 right-0 h-14 bg-background border-t flex items-center justify-between px-3">
         <div className="flex items-center space-x-2 overflow-x-auto scrollbar-hide flex-1">
           {accounts.slice(0, 10).map((acc) => (
@@ -99,7 +99,7 @@ const BottomSidebar: React.FC = () => {
               </svg>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-64 max-h-96 overflow-y-auto">
+          <DropdownMenuContent className="w-64 max-h-96 overflow-y-auto bg-popover text-popover-foreground shadow-md rounded-md p-1">
             <div className="px-3 py-2 font-semibold">Accounts Manager</div>
             {accounts.map((acc, idx) => (
               <DropdownMenuItem
@@ -190,27 +190,26 @@ const BottomSidebar: React.FC = () => {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Account</DialogTitle>
-            <DialogDescription>Enter account details below</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
-            <label className="flex items-center space-x-2">
-              <Checkbox checked={guest} onCheckedChange={(val) => setGuest(!!val)} />
-              <span>Guest Session</span>
-            </label>
-          </div>
-          <DialogFooter>
-            <Button onClick={confirmAdd} className="rounded-[8px]">
-              Add Account
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add New Account</DialogTitle>
+          <DialogDescription>Enter account details below</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
+          <label className="flex items-center space-x-2">
+            <Checkbox checked={guest} onCheckedChange={(val) => setGuest(!!val)} />
+            <span>Guest Session</span>
+          </label>
+        </div>
+        <DialogFooter>
+          <Button onClick={confirmAdd} className="rounded-[8px]">
+            Add Account
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
