@@ -1,13 +1,13 @@
 import React, { useState } from 'react'
-import type { Tab } from '../../store/useAccountStore'
-import { Button } from '../ui/button'
-import { Input } from '../ui/input'
+import type { Tab } from '../../../../store/useAccountStore'
+import { Button } from '../../../../components/ui/button'
+import { Input } from '../../../../components/ui/input'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem
-} from '../ui/dropdown-menu'
+} from '../../../../components/ui/dropdown-menu'
 
 interface TabBarProps {
   tabs: Tab[]

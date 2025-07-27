@@ -1,6 +1,6 @@
 import React from 'react'
-import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar'
-import { Button } from '../ui/button'
+import { Avatar, AvatarImage, AvatarFallback } from '../../../../components/ui/avatar'
+import { Button } from '../../../../components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -8,12 +8,12 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter
-} from '../ui/dialog'
-import { Input } from '../ui/input'
-import { Checkbox } from '../ui/checkbox'
-import useAccountStore from '../../store/useAccountStore'
+} from '../../../../components/ui/dialog'
+import { Input } from '../../../../components/ui/input'
+import { Checkbox } from '../../../../components/ui/checkbox'
+import useAccountStore from '../../../../store/useAccountStore'
 import { Menu } from 'lucide-react'
-import AccountManagerPage from './AccountManagerPage'
+import AccountManagerPage from '../../../../presentation/pages/AccountManager'
 
 const BottomSidebar: React.FC = () => {
   const { accounts, activeAccountId, setActiveAccount, addAccount, addTab, setActiveTab } =

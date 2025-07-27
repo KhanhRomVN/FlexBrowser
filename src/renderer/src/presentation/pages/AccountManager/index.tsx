@@ -1,10 +1,10 @@
 import React from 'react'
-import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar'
-import { Button } from '../ui/button'
-import { Input } from '../ui/input'
-import { Checkbox } from '../ui/checkbox'
+import { Avatar, AvatarImage, AvatarFallback } from '../../../components/ui/avatar'
+import { Button } from '../../../components/ui/button'
+import { Input } from '../../../components/ui/input'
+import { Checkbox } from '../../../components/ui/checkbox'
 import { X } from 'lucide-react'
-import useAccountStore from '../../store/useAccountStore'
+import useAccountStore from '../../../store/useAccountStore'
 
 interface AccountManagerPageProps {
   onClose: () => void

@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import './styles.css'
 import useAccountStore from './store/useAccountStore'
-import TabBar from './components/Layout/TabBar'
-import WebviewContainer from './components/Layout/WebviewContainer'
-import BottomSidebar from './components/Layout/BottomSidebar'
+import TabBar from './presentation/pages/Main/components/TabBar'
+import WebviewContainer from './components/Container/WebviewContainer'
+import BottomSidebar from './presentation/pages/Main/components/BottomSidebar'
 import {
   Dialog,
   DialogContent,
