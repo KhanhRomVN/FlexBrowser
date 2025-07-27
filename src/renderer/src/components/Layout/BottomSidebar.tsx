@@ -62,8 +62,8 @@ const BottomSidebar: React.FC = () => {
   }
 
   return (
-    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-      <div className="fixed bottom-0 left-0 right-0 h-14 bg-background border-t flex items-center justify-between px-3">
+    <>
+      <div className="fixed bottom-0 left-0 right-0 h-14 bg-background border-t flex items-center justify-between px-3 z-50">
         <div className="flex items-center space-x-2 overflow-x-auto scrollbar-hide flex-1">
           {accounts.slice(0, 10).map((acc) => (
             <Avatar
@@ -166,50 +166,56 @@ const BottomSidebar: React.FC = () => {
                 </div>
               </DropdownMenuItem>
             ))}
-            <DialogTrigger asChild>
-              <DropdownMenuItem className="cursor-pointer" onSelect={(e) => e.preventDefault()}>
-                <div className="flex items-center px-3 py-2 text-primary">
-                  <div className="bg-gray-200 dark:bg-gray-700 rounded-full w-8 h-8 flex items-center justify-center mr-2">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
+
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <DropdownMenuItem className="cursor-pointer" onSelect={(e) => e.preventDefault()}>
+                  <div className="flex items-center px-3 py-2 text-primary">
+                    <div className="bg-gray-200 dark:bg-gray-700 rounded-full w-8 h-8 flex items-center justify-center mr-2">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                    <span>Add New Account</span>
                   </div>
-                  <span>Add New Account</span>
+                </DropdownMenuItem>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add New Account</DialogTitle>
+                  <DialogDescription>Enter account details below</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <Input
+                    placeholder="Name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                  <label className="flex items-center space-x-2">
+                    <Checkbox checked={guest} onCheckedChange={(val) => setGuest(!!val)} />
+                    <span>Guest Session</span>
+                  </label>
                 </div>
-              </DropdownMenuItem>
-            </DialogTrigger>
+                <DialogFooter>
+                  <Button onClick={confirmAdd} className="rounded-[8px]">
+                    Add Account
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Add New Account</DialogTitle>
-          <DialogDescription>Enter account details below</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
-          <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
-          <label className="flex items-center space-x-2">
-            <Checkbox checked={guest} onCheckedChange={(val) => setGuest(!!val)} />
-            <span>Guest Session</span>
-          </label>
-        </div>
-        <DialogFooter>
-          <Button onClick={confirmAdd} className="rounded-[8px]">
-            Add Account
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </>
   )
 }
 

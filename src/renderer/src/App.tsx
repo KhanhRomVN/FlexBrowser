@@ -1,9 +1,19 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import './styles.css'
 import useAccountStore from './store/useAccountStore'
 import TabBar from './components/Layout/TabBar'
 import WebviewContainer from './components/Layout/WebviewContainer'
 import BottomSidebar from './components/Layout/BottomSidebar'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from './components/ui/dialog'
+import { Input } from './components/ui/input'
+import { Button } from './components/ui/button'
 
 const App: React.FC = () => {
   const {
@@ -19,24 +29,65 @@ const App: React.FC = () => {
   const url = 'https://www.google.com'
   const isElectron = !!(window as any).process?.versions?.electron
 
-  // Initialize default account on first load
+  // First-run state
+  const [showInit, setShowInit] = useState(accounts.length === 0)
+  const [initName, setInitName] = useState('')
+
+  // If store becomes empty, ensure init flow shows
   useEffect(() => {
     if (accounts.length === 0) {
-      const id = crypto.randomUUID()
-      addAccount({
-        id,
-        name: 'Default',
-        avatarUrl: `https://images.unsplash.com/seed/${id}/100x100`,
-        token: ''
-      })
-      setActiveAccount(id)
-      const hostname = new URL(url).hostname
-      const icon = `https://www.google.com/s2/favicons?domain=${hostname}`
-      addTab(id, { id: `${id}-tab`, title: hostname, url, icon })
-      setActiveTab(id, `${id}-tab`)
+      setShowInit(true)
     }
-  }, [accounts.length, addAccount, setActiveAccount, addTab, setActiveTab])
+  }, [accounts.length])
 
+  const confirmInitial = () => {
+    if (!initName.trim()) return
+    const id = crypto.randomUUID()
+    addAccount({
+      id,
+      name: initName.trim(),
+      avatarUrl: `https://images.unsplash.com/seed/${id}/100x100`,
+      token: ''
+    })
+    setActiveAccount(id)
+    const hostname = new URL(url).hostname
+    addTab(id, {
+      id: `${id}-tab`,
+      title: hostname,
+      url,
+      icon: `https://www.google.com/s2/favicons?domain=${hostname}`
+    })
+    setActiveTab(id, `${id}-tab`)
+    setShowInit(false)
+  }
+
+  // Render initial account creation dialog on first run
+  if (showInit) {
+    return (
+      <Dialog open onOpenChange={() => {}}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Welcome</DialogTitle>
+            <DialogDescription>Please create an account to continue</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              placeholder="Your Name"
+              value={initName}
+              onChange={(e) => setInitName(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button className="rounded-[8px]" onClick={confirmInitial}>
+              Create Account
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )
+  }
+
+  // Normal app UI
   const activeAccount = accounts.find((acc) => acc.id === activeAccountId)
   const tabs = activeAccount?.tabs ?? []
   const activeTabId = activeAccount?.activeTabId ?? tabs[0]?.id ?? ''
@@ -68,7 +119,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col w-full h-full">
-      <div className="flex flex-col flex-1">
+      <div className="flex flex-col flex-1 pb-14">
         <TabBar
           tabs={tabs}
           activeTabId={activeTabId}
@@ -76,7 +127,10 @@ const App: React.FC = () => {
           onDeleteTab={handleDeleteTab}
           onNewTab={handleNewTab}
         />
-        <WebviewContainer url={url} isElectron={isElectron} />
+        <WebviewContainer
+          url={tabs.find((tab) => tab.id === activeTabId)?.url || url}
+          isElectron={isElectron}
+        />
       </div>
       <BottomSidebar />
     </div>
