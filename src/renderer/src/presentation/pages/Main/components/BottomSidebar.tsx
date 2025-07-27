@@ -9,6 +9,7 @@ import {
   DialogDescription,
   DialogFooter
 } from '../../../../components/ui/dialog'
+import { Sheet, SheetContent } from '../../../../components/ui/sheet'
 import { Input } from '../../../../components/ui/input'
 import { Checkbox } from '../../../../components/ui/checkbox'
 import useAccountStore from '../../../../store/useAccountStore'
@@ -53,12 +54,12 @@ const BottomSidebar: React.FC = () => {
 
   return (
     <>
-      {/* Account Manager Overlay */}
-      <Dialog open={showAccountManager} onOpenChange={setShowAccountManager}>
-        <DialogContent className="fixed inset-0 p-0 bg-background z-50">
+      {/* Account Manager Sheet */}
+      <Sheet open={showAccountManager} onOpenChange={setShowAccountManager}>
+        <SheetContent side="right" className="p-0 w-[400px]">
           <AccountManagerPage onClose={() => setShowAccountManager(false)} />
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
 
       {/* Add Account Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
