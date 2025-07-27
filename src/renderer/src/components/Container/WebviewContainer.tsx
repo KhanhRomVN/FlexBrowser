@@ -33,7 +33,7 @@ const WebviewContainer: React.FC<{ url: string; isElectron: boolean }> = ({ url,
 
   if (isElectron) {
     return (
-      <div className="flex-1 relative pb-14">
+      <div className="h-full relative overflow-hidden">
         {accounts.length > 0 ? (
           accounts.map((acc) =>
             acc.tabs.map((tab) => (
@@ -60,7 +60,11 @@ const WebviewContainer: React.FC<{ url: string; isElectron: boolean }> = ({ url,
     )
   }
 
-  return <iframe src={url} className="flex-1" style={{ width: '100%', height: '100%' }} />
+  return (
+    <div className="h-full relative overflow-hidden">
+      <iframe src={url} className="absolute top-0 left-0 right-0 bottom-0" />
+    </div>
+  )
 }
 
 export default WebviewContainer
