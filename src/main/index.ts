@@ -104,6 +104,31 @@ app.whenReady().then(() => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
+  // Open pip window for media URLs
+  ipcMain.handle('open-pip-window', (_event, url: string) => {
+    const pipWin = new BrowserWindow({
+      width: 400,
+      height: 300,
+      frame: false,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      webPreferences: {
+        preload: join(__dirname, '../preload/index.js'),
+        sandbox: false,
+        nodeIntegration: true,
+        contextIsolation: false,
+        webviewTag: true
+      }
+    })
+    pipWin.loadURL(url)
+    return null
+  })
+  // Hide main window when opening PIP
+  ipcMain.handle('hide-main-window', () => {
+    if (mainWindow) mainWindow.hide()
+    return null
+  })
+
   // macOS: recreate window on activate
   app.on('activate', () => {
     if (!mainWindow) createWindow()

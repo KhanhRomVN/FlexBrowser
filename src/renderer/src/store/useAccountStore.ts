@@ -16,13 +16,17 @@ export interface Account {
   tabs: Tab[]
   activeTabId: string | null
   guest: boolean
+  lastUsed: string
 }
 
 interface AccountState {
   accounts: Account[]
   activeAccountId: string | null
   addAccount: (
-    account: Omit<Account, 'tabs' | 'activeTabId' | 'guest'> & { guest?: boolean }
+    account: Omit<Account, 'tabs' | 'activeTabId' | 'guest' | 'lastUsed'> & {
+      guest?: boolean
+      lastUsed?: string
+    }
   ) => void
   setActiveAccount: (id: string) => void
   addTab: (accountId: string, tab: Tab) => void
@@ -44,14 +48,21 @@ const useAccountStore = create<AccountState>()(
             ...account,
             tabs: [],
             activeTabId: null,
-            guest: account.guest ?? false
+            guest: account.guest ?? false,
+            lastUsed: account.lastUsed ?? new Date().toISOString()
           }
           return {
             accounts: [...state.accounts, newAccount],
             activeAccountId: newAccount.id
           }
         }),
-      setActiveAccount: (id) => set({ activeAccountId: id }),
+      setActiveAccount: (id) =>
+        set((state) => ({
+          accounts: state.accounts.map((acc) =>
+            acc.id === id ? { ...acc, lastUsed: new Date().toISOString() } : acc
+          ),
+          activeAccountId: id
+        })),
       addTab: (accountId, tab) =>
         set((state) => ({
           accounts: state.accounts.map((acc) =>

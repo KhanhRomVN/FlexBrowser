@@ -14,4 +14,17 @@ declare global {
       }
     }
   }
+
+  interface Window {
+    api: {
+      pip: {
+        open: (url: string) => Promise<void>
+      }
+      hide: {
+        main: () => Promise<void>
+      }
+    }
+  }
 }
+
+export {}

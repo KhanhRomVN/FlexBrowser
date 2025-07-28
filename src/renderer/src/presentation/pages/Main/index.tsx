@@ -14,6 +14,8 @@ import {
 } from '../../../components/ui/dialog'
 import { Input } from '../../../components/ui/input'
 import { Button } from '../../../components/ui/button'
+import { Music } from 'lucide-react'
+import { useGlobalAudioStore } from '../../../store/useGlobalAudioStore'
 
 const DEFAULT_URL = 'https://www.google.com'
 
@@ -27,6 +29,7 @@ const MainPage: React.FC = () => {
     setActiveTab,
     deleteTab
   } = useAccountStore()
+  const clearAudioState = useGlobalAudioStore((state) => state.clearAudioState)
 
   const isElectron = !!(window as any).process?.versions?.electron
   const [showInit, setShowInit] = useState(accounts.length === 0)
@@ -53,13 +56,13 @@ const MainPage: React.FC = () => {
 
     const host = new URL(DEFAULT_URL).hostname
     const tabId = `${accountId}-tab`
-    addTab(accountId, {
+    addTab(activeAccountId!, {
       id: tabId,
       title: host,
       url: DEFAULT_URL,
       icon: `https://www.google.com/s2/favicons?domain=${host}`
     })
-    setActiveTab(accountId, tabId)
+    setActiveTab(accountId!, tabId)
 
     setShowInit(false)
   }
@@ -93,11 +96,13 @@ const MainPage: React.FC = () => {
   const activeTabId = activeAccount?.activeTabId ?? tabs[0]?.id ?? ''
 
   const handleTabChange = (tabId: string) => {
-    activeAccountId && setActiveTab(activeAccountId, tabId)
+    if (activeAccountId) setActiveTab(activeAccountId, tabId)
   }
 
   const handleDeleteTab = (tabId: string) => {
-    activeAccountId && deleteTab(activeAccountId, tabId)
+    if (!activeAccountId) return
+    deleteTab(activeAccountId, tabId)
+    clearAudioState(tabId)
   }
 
   const handleNewTab = () => {
@@ -113,9 +118,12 @@ const MainPage: React.FC = () => {
     setActiveTab(activeAccountId, newTabId)
   }
 
+  const activeUrl = tabs.find((t) => t.id === activeTabId)?.url || DEFAULT_URL
+  const shouldShowPip =
+    /youtube\.com/.test(activeUrl) || /\.(mp4|webm|ogg|mp3|wav)(\?.*)?$/.test(activeUrl)
+
   return (
     <div className="flex flex-col w-full h-screen">
-      {/* Tabs always visible */}
       <TabBar
         tabs={tabs}
         activeTabId={activeTabId}
@@ -123,14 +131,23 @@ const MainPage: React.FC = () => {
         onDeleteTab={handleDeleteTab}
         onNewTab={handleNewTab}
       />
-      {/* Webview takes all remaining space and is padded above the bottom sidebar */}
-      <div className="flex-1 h-full overflow-hidden">
-        <WebviewContainer
-          url={tabs.find((t) => t.id === activeTabId)?.url || DEFAULT_URL}
-          isElectron={isElectron}
-        />
+      <div className="flex-1 h-full overflow-hidden relative">
+        <WebviewContainer url={activeUrl} isElectron={isElectron} tabId={activeTabId} />
+        {shouldShowPip && (
+          <Button
+            size="icon"
+            variant="ghost"
+            className="absolute top-2 right-2 z-50 bg-red-500 text-white p-3 rounded-full shadow-lg"
+            onClick={() =>
+              isElectron
+                ? window.api.pip.open(activeUrl)
+                : window.open(activeUrl, 'pip', 'width=400,height=300,alwaysOnTop=yes')
+            }
+          >
+            <Music className="w-6 h-6" />
+          </Button>
+        )}
       </div>
-      {/* Fixed bottom sidebar */}
       <BottomSidebar />
     </div>
   )
