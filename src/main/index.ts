@@ -120,7 +120,27 @@ app.whenReady().then(() => {
         webviewTag: true
       }
     })
-    pipWin.loadURL(url)
+    // Determine embed URL for YouTube or direct video
+    let pipUrl = url
+    if (/youtu\.be/.test(url) || /youtube\.com/.test(url)) {
+      try {
+        const u = new URL(url)
+        const vid = u.searchParams.get('v') || u.pathname.split('/').pop()
+        if (vid) {
+          pipUrl = `https://www.youtube.com/embed/${vid}?autoplay=1&controls=1&modestbranding=1&rel=0&playsinline=1`
+        }
+      } catch {}
+    }
+    // For direct video URLs, render only the video element in a minimal HTML wrapper
+    if (/\.(mp4|webm|ogg)$/i.test(url)) {
+      const html = `
+        <body style="margin:0; background:black;">
+          <video src="${url}" controls autoplay style="width:100%; height:100%;"></video>
+        </body>`
+      pipWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
+    } else {
+      pipWin.loadURL(pipUrl)
+    }
     return null
   })
   // Hide main window when opening PIP
