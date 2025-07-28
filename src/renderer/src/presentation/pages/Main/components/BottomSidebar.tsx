@@ -211,7 +211,7 @@ const BottomSidebar: React.FC = () => {
                       <Button variant="ghost" size="icon" onClick={() => pauseTab(tabId)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
-                      {/\.(mp4|webm|ogg)/.test(state.url) && (
+                      {(/\.(mp4|webm|ogg)/.test(state.url) || /youtube\.com/.test(state.url)) && (
                         <Button
                           variant="ghost"
                           size="icon"
