@@ -1,5 +1,10 @@
 import React, { useEffect, useState } from 'react'
-import ReactDOM from 'react-dom'
+import {
+  Dialog,
+  DialogOverlay,
+  DialogContent,
+  DialogClose
+} from '../../../../../components/ui/dialog'
 import { X, Play, Pause } from 'lucide-react'
 import { Button } from '../../../../../components/ui/button'
 
@@ -16,14 +21,8 @@ const FullscreenVideoOverlay: React.FC<FullscreenVideoOverlayProps> = ({
 
   useEffect(() => {
     if (!fullscreenVideo) return
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        closeFullscreen()
-      }
-    }
-    window.addEventListener('keydown', handleEsc)
-    return () => window.removeEventListener('keydown', handleEsc)
-  }, [fullscreenVideo, closeFullscreen])
+    setIsPaused(false)
+  }, [fullscreenVideo])
 
   if (!fullscreenVideo) return null
 
@@ -38,58 +37,65 @@ const FullscreenVideoOverlay: React.FC<FullscreenVideoOverlayProps> = ({
     }
   }
 
-  return ReactDOM.createPortal(
-    <div className="fixed inset-0 z-[1000] bg-black flex items-center justify-center">
-      <button onClick={closeFullscreen} className="absolute top-4 right-4 text-white z-[1010]">
-        <X className="h-6 w-6" />
-      </button>
+  return (
+    <Dialog open={true} onOpenChange={(open) => !open && closeFullscreen()}>
+      + <DialogOverlay className="fixed inset-0 bg-black/75 z-[1000]" />
+      <DialogContent className="relative z-[1001] bg-black p-0 max-w-3xl w-full max-h-screen mx-auto">
+        <div className="relative">
+          <DialogClose asChild>
+            <button className="absolute top-3 right-3 text-white z-10">
+              <X className="h-6 w-6" />
+            </button>
+          </DialogClose>
 
-      {isYouTube && youtubeId ? (
-        <iframe
-          src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1`}
-          allow="autoplay; fullscreen"
-          frameBorder="0"
-          className="max-w-full max-h-full"
-        />
-      ) : (
-        <video
-          src={url}
-          controls
-          autoPlay
-          muted
-          className="max-w-full max-h-full"
-          onLoadedMetadata={(e) => {
-            const vid = e.currentTarget
-            vid.muted = false
-          }}
-          ref={(el) => {
-            if (el) {
-              el.onpause = () => setIsPaused(true)
-              el.onplay = () => setIsPaused(false)
-            }
-          }}
-        />
-      )}
+          {isYouTube && youtubeId ? (
+            <iframe
+              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1`}
+              allow="autoplay; fullscreen"
+              frameBorder="0"
+              className="w-full h-[60vh]"
+            />
+          ) : (
+            <video
+              src={url}
+              controls
+              autoPlay
+              muted
+              className="w-full h-[60vh] bg-black"
+              onLoadedMetadata={(e) => {
+                e.currentTarget.muted = false
+              }}
+              ref={(el) => {
+                if (el) {
+                  el.onpause = () => setIsPaused(true)
+                  el.onplay = () => setIsPaused(false)
+                }
+              }}
+            />
+          )}
 
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-4 z-[1010]">
-        <Button
-          variant="secondary"
-          size="icon"
-          onClick={() => {
-            const videoEl = document.querySelector('video')
-            if (videoEl) {
-              videoEl.paused ? videoEl.play() : videoEl.pause()
-            }
-          }}
-        >
-          {isPaused ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
-        </Button>
-        <Button variant="destructive" size="icon" onClick={closeFullscreen}>
-          <X className="h-5 w-5 mr-1" /> Close
-        </Button>
-      </div>
-    </div>,
-    document.body
+          <div className="flex justify-center items-center bg-black py-2 space-x-4">
+            <Button
+              variant="secondary"
+              size="icon"
+              onClick={() => {
+                const videoEl = document.querySelector('video')
+                if (videoEl) {
+                  videoEl.paused ? videoEl.play() : videoEl.pause()
+                }
+              }}
+            >
+              {isPaused ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
+            </Button>
+            <DialogClose asChild>
+              <Button variant="destructive" size="icon">
+                <X className="h-5 w-5 mr-1" /> Close
+              </Button>
+            </DialogClose>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 

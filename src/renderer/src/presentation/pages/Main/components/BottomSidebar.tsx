@@ -8,7 +8,6 @@ import SettingDrawer from './SettingDrawer'
 import AvatarList from './BottomSidebar/AvatarList'
 import AddAccountDialog from './BottomSidebar/AddAccountDialog'
 import AudioPanel from './BottomSidebar/AudioPanel'
-import FullscreenVideoOverlay from './BottomSidebar/FullscreenVideoOverlay'
 
 const BottomSidebar: React.FC = () => {
   const {
@@ -24,10 +23,6 @@ const BottomSidebar: React.FC = () => {
   const clearAudioState = useGlobalAudioStore((s) => s.clearAudioState)
   const playingTabs = Object.entries(audioStates).filter(([_, s]) => s.isPlaying)
 
-  const [fullscreenVideo, setFullscreenVideo] = useState<{ url: string; tabId: string } | null>(
-    null
-  )
-  const [videoStates, setVideoStates] = useState<Record<string, boolean>>({})
   const [showSettings, setShowSettings] = useState(false)
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [name, setName] = useState('')
@@ -80,51 +75,14 @@ const BottomSidebar: React.FC = () => {
   }
 
   const openFullscreen = (url: string, tabId: string) => {
-    // If URL is direct video or YouTube page, open directly
-    if (/\.(mp4|webm|ogg)$/.test(url) || /youtube\.com/.test(url)) {
-      setVideoStates((prev) => ({ ...prev, [tabId]: true }))
-      Object.keys(audioStates).forEach((tid) => pauseTab(tid))
-      window.api.hide.main()
-      setFullscreenVideo({ url, tabId })
-      return
-    }
-
-    const el = document.getElementById('webview-' + tabId) as any
-    if (!el) return
-
-    el.executeJavaScript(
-      'const video = document.querySelector("video"); const isPlaying = video && !video.paused; [video?.src, isPlaying];'
-    ).then(([videoUrl, isPlaying]: [string, boolean]) => {
-      if (videoUrl) {
-        setVideoStates((prev) => ({ ...prev, [tabId]: isPlaying }))
-        Object.keys(audioStates).forEach((tid) => pauseTab(tid))
-        window.api.hide.main()
-        setFullscreenVideo({ url: videoUrl, tabId })
-      }
-    })
-  }
-
-  const closeFullscreen = () => {
-    if (!fullscreenVideo) return
-    const { tabId } = fullscreenVideo
-    const el = document.getElementById('webview-' + tabId) as any
-    // restore playing state if video was playing before fullscreen
-    if (videoStates[tabId]) {
-      el?.executeJavaScript?.('document.querySelectorAll("video,audio").forEach(el => el.play());')
-    }
-    setActiveTab(activeAccountId!, tabId)
-    window.api.show.main()
-    setFullscreenVideo(null)
-    // clean up stored play state
-    setVideoStates((prev) => {
-      const { [tabId]: _, ...rest } = prev
-      return rest
-    })
+    // Pause any playing media and hide main window, then open PiP popup
+    Object.keys(audioStates).forEach((tid) => pauseTab(tid))
+    window.api.hide.main()
+    window.api.pip.open(url)
   }
 
   return (
     <>
-      <FullscreenVideoOverlay fullscreenVideo={fullscreenVideo} closeFullscreen={closeFullscreen} />
       <AccountManagerDrawer open={showAccountManager} onOpenChange={setShowAccountManager} />
       <SettingDrawer open={showSettings} onOpenChange={setShowSettings} />
       <AddAccountDialog
