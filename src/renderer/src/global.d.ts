@@ -17,6 +17,7 @@ declare global {
 
   interface Window {
     api: {
+      show: any
       pip: {
         open: (url: string) => Promise<void>
       }

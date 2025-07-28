@@ -129,6 +129,12 @@ app.whenReady().then(() => {
     return null
   })
 
+  // Show main window when exiting fullscreen
+  ipcMain.handle('show-main-window', () => {
+    if (mainWindow) mainWindow.show()
+    return null
+  })
+
   // macOS: recreate window on activate
   app.on('activate', () => {
     if (!mainWindow) createWindow()

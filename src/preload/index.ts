@@ -8,6 +8,9 @@ const api = {
   },
   hide: {
     main: () => ipcRenderer.invoke('hide-main-window')
+  },
+  show: {
+    main: () => ipcRenderer.invoke('show-main-window')
   }
 }
 

@@ -4,14 +4,13 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetFooter,
-  SheetClose
+  SheetFooter
 } from '../../../../components/ui/sheet'
 import { Avatar, AvatarImage, AvatarFallback } from '../../../../components/ui/avatar'
 import { Button } from '../../../../components/ui/button'
 import { Input } from '../../../../components/ui/input'
 import { Checkbox } from '../../../../components/ui/checkbox'
-import { X, Trash2, ArrowRight } from 'lucide-react'
+import { Trash2, ArrowRight } from 'lucide-react'
 import useAccountStore from '../../../../store/useAccountStore'
 
 interface AccountManagerDrawerProps {

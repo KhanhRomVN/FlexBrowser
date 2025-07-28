@@ -1,6 +1,8 @@
 import React from 'react'
 import { Avatar, AvatarImage, AvatarFallback } from '../../../../components/ui/avatar'
 import { Button } from '../../../../components/ui/button'
+import { Input } from '../../../../components/ui/input'
+import { Checkbox } from '../../../../components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -9,8 +11,6 @@ import {
   DialogDescription,
   DialogFooter
 } from '../../../../components/ui/dialog'
-import { Input } from '../../../../components/ui/input'
-import { Checkbox } from '../../../../components/ui/checkbox'
 import useAccountStore from '../../../../store/useAccountStore'
 import { Menu, Settings, X, Music, Film, Volume2, VolumeX, Trash2 } from 'lucide-react'
 import AccountManagerDrawer from './AccountManagerDrawer'
@@ -49,6 +49,28 @@ const BottomSidebar: React.FC = () => {
     clearAudioState(tabId)
   }
 
+  // Fullscreen video popup state & handlers
+  const [fullscreenVideo, setFullscreenVideo] = React.useState<{
+    url: string
+    tabId: string
+  } | null>(null)
+
+  const openFullscreen = (url: string, tabId: string) => {
+    // Pause any in-app playing tabs
+    Object.keys(audioStates).forEach((tid) => pauseTab(tid))
+    window.api.hide.main()
+    setFullscreenVideo({ url, tabId })
+  }
+
+  const closeFullscreen = () => {
+    if (!fullscreenVideo) return
+    const { tabId } = fullscreenVideo
+    const el = document.getElementById(`webview-${tabId}`) as any
+    el?.executeJavaScript?.(`document.querySelectorAll('video,audio').forEach(el => el.play());`)
+    setActiveTab(activeAccountId!, tabId)
+    window.api.show.main()
+    setFullscreenVideo(null)
+  }
   const [showSettings, setShowSettings] = React.useState(false)
   const [avatarToDelete, setAvatarToDelete] = React.useState<string | null>(null)
 
@@ -87,6 +109,16 @@ const BottomSidebar: React.FC = () => {
 
   return (
     <>
+      {/* Fullscreen Video Dialog */}
+      {/* Fullscreen Video Overlay */}
+      {fullscreenVideo && (
+        <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
+          <button onClick={closeFullscreen} className="absolute top-4 right-4 text-white z-50">
+            <X className="h-6 w-6" />
+          </button>
+          <video src={fullscreenVideo.url} controls autoPlay className="max-w-full max-h-full" />
+        </div>
+      )}
       {/* Account Manager Drawer */}
       <AccountManagerDrawer open={showAccountManager} onOpenChange={setShowAccountManager} />
       {/* Settings Drawer */}
@@ -215,10 +247,7 @@ const BottomSidebar: React.FC = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => {
-                            window.api.hide.main()
-                            window.api.pip.open(state.url)
-                          }}
+                          onClick={() => openFullscreen(state.url, tabId)}
                         >
                           <Film className="h-4 w-4" />
                         </Button>
