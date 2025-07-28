@@ -27,6 +27,7 @@ const BottomSidebar: React.FC = () => {
   const [fullscreenVideo, setFullscreenVideo] = useState<{ url: string; tabId: string } | null>(
     null
   )
+  const [videoStates, setVideoStates] = useState<Record<string, boolean>>({})
   const [showSettings, setShowSettings] = useState(false)
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [name, setName] = useState('')
@@ -79,19 +80,46 @@ const BottomSidebar: React.FC = () => {
   }
 
   const openFullscreen = (url: string, tabId: string) => {
-    Object.keys(audioStates).forEach((tid) => pauseTab(tid))
-    window.api.hide.main()
-    setFullscreenVideo({ url, tabId })
+    // If URL is direct video or YouTube page, open directly
+    if (/\.(mp4|webm|ogg)$/.test(url) || /youtube\.com/.test(url)) {
+      setVideoStates((prev) => ({ ...prev, [tabId]: true }))
+      Object.keys(audioStates).forEach((tid) => pauseTab(tid))
+      window.api.hide.main()
+      setFullscreenVideo({ url, tabId })
+      return
+    }
+
+    const el = document.getElementById('webview-' + tabId) as any
+    if (!el) return
+
+    el.executeJavaScript(
+      'const video = document.querySelector("video"); const isPlaying = video && !video.paused; [video?.src, isPlaying];'
+    ).then(([videoUrl, isPlaying]: [string, boolean]) => {
+      if (videoUrl) {
+        setVideoStates((prev) => ({ ...prev, [tabId]: isPlaying }))
+        Object.keys(audioStates).forEach((tid) => pauseTab(tid))
+        window.api.hide.main()
+        setFullscreenVideo({ url: videoUrl, tabId })
+      }
+    })
   }
 
   const closeFullscreen = () => {
     if (!fullscreenVideo) return
     const { tabId } = fullscreenVideo
-    const el = document.getElementById(`webview-${tabId}`) as any
-    el?.executeJavaScript?.(`document.querySelectorAll('video,audio').forEach(el => el.play());`)
+    const el = document.getElementById('webview-' + tabId) as any
+    // restore playing state if video was playing before fullscreen
+    if (videoStates[tabId]) {
+      el?.executeJavaScript?.('document.querySelectorAll("video,audio").forEach(el => el.play());')
+    }
     setActiveTab(activeAccountId!, tabId)
     window.api.show.main()
     setFullscreenVideo(null)
+    // clean up stored play state
+    setVideoStates((prev) => {
+      const { [tabId]: _, ...rest } = prev
+      return rest
+    })
   }
 
   return (
