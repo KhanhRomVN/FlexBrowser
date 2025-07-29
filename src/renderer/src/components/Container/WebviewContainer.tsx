@@ -29,6 +29,12 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
 
     const handleDomReady = () => {
       const currentUrl = el.getURL()
+      const hostname = new URL(currentUrl).hostname
+      // update tab state on initial load
+      updateTab(activeAccountId, activeTabId, {
+        url: currentUrl,
+        icon: `https://www.google.com/s2/favicons?domain=${hostname}`
+      })
       const match =
         /youtube\\.com/.test(currentUrl) || /\.(mp4|webm|ogg|mp3|wav)(\\?.*)?$/.test(currentUrl)
       if (match) {
@@ -60,7 +66,13 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
     }
 
     const handleTitle = (e: any) => {
-      updateTab(activeAccountId, activeTabId, { title: e.title })
+      const newUrl = el.getURL()
+      const hostname = new URL(newUrl).hostname
+      updateTab(activeAccountId, activeTabId, {
+        title: e.title,
+        url: newUrl,
+        icon: `https://www.google.com/s2/favicons?domain=${hostname}`
+      })
     }
 
     const handleNavigate = (_event: any, navigationUrl: string) => {
@@ -85,12 +97,15 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
     el.addEventListener('dom-ready', handleDomReady)
     el.addEventListener('page-title-updated', handleTitle as any)
     el.addEventListener('did-navigate', handleNavigate as any)
+    // also catch in-page/SPAs navigation so we update stored URL
+    el.addEventListener('did-navigate-in-page', handleNavigate as any)
     const audioInterval = setInterval(handleAudioState, 1000)
 
     return () => {
       el.removeEventListener('dom-ready', handleDomReady)
       el.removeEventListener('page-title-updated', handleTitle as any)
       el.removeEventListener('did-navigate', handleNavigate as any)
+      el.removeEventListener('did-navigate-in-page', handleNavigate as any)
       clearInterval(audioInterval)
     }
   }, [activeAccountId, activeTabId, isElectron, updateTab, tabId, setAudioState])

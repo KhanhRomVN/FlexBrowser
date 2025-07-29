@@ -56,13 +56,13 @@ const MainPage: React.FC = () => {
 
     const host = new URL(DEFAULT_URL).hostname
     const tabId = `${accountId}-tab`
-    addTab(activeAccountId!, {
+    addTab(accountId, {
       id: tabId,
       title: host,
       url: DEFAULT_URL,
       icon: `https://www.google.com/s2/favicons?domain=${host}`
     })
-    setActiveTab(accountId!, tabId)
+    setActiveTab(accountId, tabId)
 
     setShowInit(false)
   }

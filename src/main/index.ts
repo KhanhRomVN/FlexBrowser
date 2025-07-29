@@ -131,16 +131,55 @@ app.whenReady().then(() => {
         }
       } catch {}
     }
-    // For direct video URLs, render only the video element in a minimal HTML wrapper
-    if (/\.(mp4|webm|ogg)$/i.test(url)) {
-      const html = `
-        <body style="margin:0; background:black;">
-          <video src="${url}" controls autoplay style="width:100%; height:100%;"></video>
-        </body>`
-      pipWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
-    } else {
-      pipWin.loadURL(pipUrl)
-    }
+    // Render media in minimal HTML wrapper with close button
+    const isVideo = /\.(mp4|webm|ogg)$/i.test(url)
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  html, body { margin:0; padding:0; width:100%; height:100%; background:black; overflow:hidden; }
+  #close-btn {
+    position:fixed; top:8px; right:8px;
+    display:flex; align-items:center; justify-content:center;
+    width:32px; height:32px; background:rgba(255,69,58,0.8);
+    border:none; border-radius:16px; cursor:pointer; opacity:1;
+    pointer-events:auto;
+    transition:opacity 0.2s, background 0.2s;
+    z-index:1002;
+  }
+  #media {
+    width:100%; height:100%; object-fit:contain;
+    z-index:1001; /* below close button */
+  }
+  #close-btn:hover { background:rgba(255,69,58,1); }
+  #close-btn svg { width:16px; height:16px; fill:white; }
+  #media { width:100%; height:100%; object-fit:contain; }
+  iframe#media { border:none; }
+</style>
+</head>
+<body>
+<button id="close-btn" title="Close">
+<svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+</button>
+${
+  isVideo
+    ? `<video id="media" src="${url}" autoplay controls></video>`
+    : `<iframe id="media" src="${pipUrl}" allow="autoplay; fullscreen" allowfullscreen></iframe>`
+}
+<script>
+  document.getElementById('close-btn').addEventListener('click', () => window.close());
+  const media = document.getElementById('media');
+  if(media && media.tagName==='VIDEO') {
+    media.onloadedmetadata = () => window.resizeTo(media.videoWidth, media.videoHeight);
+  }
+</script>
+</body>
+</html>`
+    pipWin.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html))
+    pipWin.webContents.on('did-finish-load', () => {
+      if (!isVideo) pipWin.setAspectRatio(16 / 9)
+    })
     return null
   })
   // Hide main window when opening PIP
