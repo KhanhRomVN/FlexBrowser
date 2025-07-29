@@ -4,8 +4,10 @@ import { electronAPI } from '@electron-toolkit/preload'
 // Custom APIs for renderer
 const api = {
   pip: {
-    open: (url: string) => ipcRenderer.invoke('open-pip-window', url)
+    open: (url: string, currentTime?: number) =>
+      ipcRenderer.invoke('open-pip-window', url, currentTime)
   },
+  moveWindow: (x: number, y: number) => ipcRenderer.send('move-pip-window', x, y),
   hide: {
     main: () => ipcRenderer.invoke('hide-main-window')
   },

@@ -137,12 +137,31 @@ const MainPage: React.FC = () => {
           <Button
             size="icon"
             variant="ghost"
-            className="absolute top-2 right-2 z-50 bg-red-500 text-white p-3 rounded-full shadow-lg"
-            onClick={() =>
-              isElectron
-                ? window.api.pip.open(activeUrl)
-                : window.open(activeUrl, 'pip', 'width=400,height=300,alwaysOnTop=yes')
-            }
+            className="absolute top-2 right-2 z-50"
+            onClick={async () => {
+              const webview = document.getElementById(`webview-${activeTabId}`) as any
+              let currentTime = 0
+              if (webview) {
+                try {
+                  currentTime = await webview.executeJavaScript(`
+                    (function() {
+                      const yt = window.YT?.player?.getPlayerByElement?.('video-player')
+                      if (yt?.getCurrentTime) return yt.getCurrentTime()
+                      const vid = document.querySelector('video')
+                      return vid ? vid.currentTime : 0
+                    })();
+                  `)
+                } catch (e) {
+                  console.error('Error getting currentTime:', e)
+                }
+              }
+              if (isElectron) {
+                // @ts-ignore: allow optional currentTime parameter
+                window.api.pip.open(activeUrl, currentTime)
+              } else {
+                window.open(activeUrl, 'pip', 'width=400,height=300,alwaysOnTop=yes')
+              }
+            }}
           >
             <Music className="w-6 h-6" />
           </Button>

@@ -74,11 +74,26 @@ const BottomSidebar: React.FC = () => {
     clearAudioState(tabId)
   }
 
-  const openFullscreen = (url: string, tabId: string) => {
+  const openFullscreen = async (url: string, tabId: string) => {
     // Pause any playing media and hide main window, then open PiP popup
     Object.keys(audioStates).forEach((tid) => pauseTab(tid))
     window.api.hide.main()
-    window.api.pip.open(url)
+    const webview = document.getElementById(`webview-${tabId}`) as any
+    let currentTime = 0
+    if (webview?.executeJavaScript) {
+      try {
+        currentTime = await webview.executeJavaScript(`
+          (function() {
+            const vid = document.querySelector('video')
+            return vid ? vid.currentTime : 0
+          })();
+        `)
+      } catch (e) {
+        console.error('Error fetching currentTime for PiP:', e)
+      }
+    }
+    // @ts-ignore: allow passing currentTime
+    window.api.pip.open(url, currentTime)
   }
 
   return (
