@@ -2,7 +2,17 @@ import { BrowserWindow, BrowserView } from 'electron'
 import { join } from 'path'
 import { getMainWindow } from './mainWindow'
 
+// Track current PiP window for cleanup and reuse
+let currentPipWin: BrowserWindow | null = null
+
 export async function openPipWindow(url: string, currentTime?: number): Promise<void> {
+  // Close any existing PiP before opening a new one
+  if (currentPipWin) {
+    currentPipWin.close()
+    currentPipWin = null
+  }
+
+  // Determine source and timing
   let mediaSrc = url
   let mediaTime = currentTime ?? 0
   const isYouTube = /youtu\.be/.test(url) || /youtube\.com/.test(url)
@@ -10,15 +20,13 @@ export async function openPipWindow(url: string, currentTime?: number): Promise<
   const isPrimeVideo = /primevideo\.com/.test(url)
   const isDisneyPlus = /disneyplus\.com/.test(url)
 
-  // Extract video info via preload API for non-YouTube/non-static URLs
+  // Extract actual video URL/time for non-YouTube/static
   if (!isYouTube && !/\.(mp4|webm|ogg)$/i.test(url)) {
     try {
-      const mainWindow = getMainWindow()
-      if (mainWindow) {
+      const main = getMainWindow()
+      if (main) {
         const result: { src: string; currentTime: number } | null =
-          await mainWindow.webContents.executeJavaScript(
-            'window.api.getVideoInfoForPip && window.api.getVideoInfoForPip()'
-          )
+          await main.webContents.executeJavaScript('window.api.getVideoInfoForPip?.()')
         if (result) {
           mediaSrc = result.src
           mediaTime = result.currentTime
@@ -29,10 +37,10 @@ export async function openPipWindow(url: string, currentTime?: number): Promise<
     }
   }
 
-  // Adjust URL for known providers
+  // Build PiP URL
   let pipUrl = mediaSrc
-  // Static media: wrap in simple HTML for autoplay
   if (/\.(mp4|webm|ogg)$/i.test(mediaSrc)) {
+    // Static file: wrap in minimal HTML for autoplay
     const html = `<!DOCTYPE html><html><body style="margin:0;background:black;"><video src="${mediaSrc}" autoplay playsinline style="width:100%;height:100%;object-fit:contain"></video></body></html>`
     pipUrl = `data:text/html;charset=UTF-8,${encodeURIComponent(html)}`
   } else if (isNetflix) {
@@ -51,9 +59,7 @@ export async function openPipWindow(url: string, currentTime?: number): Promise<
     } catch {}
   }
 
-  // Hide main window
-  const mainWin = getMainWindow()
-  if (mainWin) mainWin.hide()
+  // Defer hiding main until PiP is ready
 
   // Create PiP window
   const pipWin = new BrowserWindow({
@@ -72,8 +78,9 @@ export async function openPipWindow(url: string, currentTime?: number): Promise<
       contextIsolation: true
     }
   })
+  currentPipWin = pipWin
 
-  // Embed video view
+  // Embed video in BrowserView
   const view = new BrowserView({
     webPreferences: {
       autoplayPolicy: 'no-user-gesture-required',
@@ -87,7 +94,6 @@ export async function openPipWindow(url: string, currentTime?: number): Promise<
   view.setBounds({ x: 0, y: 0, width: 400, height: 300 })
   view.setAutoResize({ width: true, height: true })
 
-  // Once content loaded, inject CSS, play and PiP then show window
   view.webContents.once('did-finish-load', async () => {
     try {
       const pipCSS = [
@@ -115,12 +121,20 @@ export async function openPipWindow(url: string, currentTime?: number): Promise<
     }
   })
 
-  // Load URL
+  // Load content
   await view.webContents.loadURL(pipUrl)
 
-  // Close/restore logic
+  // Cleanup on blur and close
   pipWin.on('blur', () => pipWin.close())
   pipWin.on('close', () => {
-    if (mainWin) mainWin.show()
+    // After PiP closed: reset reference, show main, pause media
+    currentPipWin = null
+    const main = getMainWindow()
+    if (main) {
+      main.show()
+      main.webContents.executeJavaScript(
+        `document.querySelectorAll('video, audio').forEach(v => v.pause());`
+      )
+    }
   })
 }
