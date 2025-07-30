@@ -5,13 +5,13 @@ import { getMainWindow } from './mainWindow'
 export async function openPipWindow(url: string, currentTime?: number): Promise<void> {
   let mediaSrc = url
   let mediaTime = currentTime ?? 0
-  const isYouTube = /youtu\\.be/.test(url) || /youtube\\.com/.test(url)
-  const isNetflix = /netflix\\.com/.test(url)
-  const isPrimeVideo = /primevideo\\.com/.test(url)
-  const isDisneyPlus = /disneyplus\\.com/.test(url)
+  const isYouTube = /youtu\.be/.test(url) || /youtube\.com/.test(url)
+  const isNetflix = /netflix\.com/.test(url)
+  const isPrimeVideo = /primevideo\.com/.test(url)
+  const isDisneyPlus = /disneyplus\.com/.test(url)
 
   // Extract video info via preload API for non-YouTube/non-static URLs
-  if (!isYouTube && !/\\.(mp4|webm|ogg)$/i.test(url)) {
+  if (!isYouTube && !/\.(mp4|webm|ogg)$/i.test(url)) {
     try {
       const mainWindow = getMainWindow()
       if (mainWindow) {
@@ -31,7 +31,11 @@ export async function openPipWindow(url: string, currentTime?: number): Promise<
 
   // Adjust URL for known providers
   let pipUrl = mediaSrc
-  if (isNetflix) {
+  // Static media: wrap in simple HTML for autoplay
+  if (/\.(mp4|webm|ogg)$/i.test(mediaSrc)) {
+    const html = `<!DOCTYPE html><html><body style="margin:0;background:black;"><video src="${mediaSrc}" autoplay playsinline style="width:100%;height:100%;object-fit:contain"></video></body></html>`
+    pipUrl = `data:text/html;charset=UTF-8,${encodeURIComponent(html)}`
+  } else if (isNetflix) {
     pipUrl = url.replace('/watch/', '/player/')
   } else if (isPrimeVideo) {
     pipUrl = url.replace('/detail/', '/play/')
@@ -42,13 +46,9 @@ export async function openPipWindow(url: string, currentTime?: number): Promise<
       const u = new URL(url)
       const vid = u.searchParams.get('v') || u.pathname.split('/').pop()
       if (vid) {
-        pipUrl =
-          `https://www.youtube.com/embed/${vid}` +
-          `?autoplay=1&controls=0&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1&fs=0&playsinline=1&start=${Math.floor(mediaTime)}`
+        pipUrl = `https://www.youtube.com/embed/${vid}?autoplay=1&controls=0&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1&fs=0&playsinline=1&start=${Math.floor(mediaTime)}`
       }
-    } catch {
-      // ignore invalid URL
-    }
+    } catch {}
   }
 
   // Hide main window
@@ -94,21 +94,19 @@ export async function openPipWindow(url: string, currentTime?: number): Promise<
         'body { margin:0; padding:0; display:flex !important; align-items:center !important; justify-content:center !important; overflow:hidden !important; background:black !important; }',
         '*:not(video){ visibility:hidden !important; opacity:0 !important; width:0 !important; height:0 !important; display:none !important; }',
         'video { position:fixed !important; top:0 !important; left:0 !important; width:100% !important; height:100% !important; object-fit:contain !important; z-index:9999 !important; }'
-      ].join('\\n')
+      ].join('\n')
       await view.webContents.insertCSS(pipCSS)
       await view.webContents.executeJavaScript(
-        '(async () => {' +
-          'const v = document.querySelector("video");' +
-          'if (v) {' +
-          'v.currentTime = ' +
-          mediaTime +
-          ';' +
-          'try { v.play(); } catch {}' +
-          'if (document.pictureInPictureEnabled && !document.pictureInPictureElement) {' +
-          'v.requestPictureInPicture().catch(() => {});' +
-          '}' +
-          '}' +
-          '})();'
+        `(async () => {
+          const v = document.querySelector("video");
+          if (v) {
+            v.currentTime = ${mediaTime};
+            try { await v.play(); } catch {}
+            if (document.pictureInPictureEnabled && !document.pictureInPictureElement) {
+              await v.requestPictureInPicture().catch(() => {});
+            }
+          }
+        })();`
       )
     } catch (e) {
       console.error('[pipWindow] playback/PiP error:', e)
