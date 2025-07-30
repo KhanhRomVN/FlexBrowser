@@ -91,12 +91,28 @@ const BottomSidebar: React.FC = () => {
         console.error('Error fetching currentTime for PiP:', error)
       }
     }
+    // Hide main window before entering PiP (builtin or custom)
+    // @ts-ignore
+    window.api.hide.main()
+
     try {
       // Try built-in PiP first
       const usedBuiltIn = await webview.executeJavaScript(
         '(async () => { const vid = document.querySelector("video"); if (vid && vid.requestPictureInPicture) { await vid.requestPictureInPicture(); return true;} return false; })()'
       )
-      if (!usedBuiltIn) {
+      // If built-in PiP succeeded, register exit handler and return
+      if (usedBuiltIn) {
+        // @ts-ignore
+        await webview.executeJavaScript(`
+          (function() {
+            const v = document.querySelector("video");
+            if (v && document.pictureInPictureEnabled) {
+              v.addEventListener("leavepictureinpicture", () => { window.api.show.main(); });
+            }
+          })();
+        `)
+        return
+      } else {
         // Fallback to custom PiP window
         window.api.hide.main()
         // @ts-ignore
