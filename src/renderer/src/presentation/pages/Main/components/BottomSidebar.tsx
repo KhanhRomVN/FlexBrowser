@@ -75,9 +75,8 @@ const BottomSidebar: React.FC = () => {
   }
 
   const openFullscreen = async (url: string, tabId: string) => {
-    // Pause any playing media and hide main window, then open PiP popup
+    // Pause any playing media first
     Object.keys(audioStates).forEach((tid) => pauseTab(tid))
-    window.api.hide.main()
     const webview = document.getElementById(`webview-${tabId}`) as any
     let currentTime = 0
     if (webview?.executeJavaScript) {
@@ -88,12 +87,27 @@ const BottomSidebar: React.FC = () => {
             return vid ? vid.currentTime : 0
           })();
         `)
-      } catch (e) {
-        console.error('Error fetching currentTime for PiP:', e)
+      } catch (error) {
+        console.error('Error fetching currentTime for PiP:', error)
       }
     }
-    // @ts-ignore: allow passing currentTime
-    window.api.pip.open(url, currentTime)
+    try {
+      // Try built-in PiP first
+      const usedBuiltIn = await webview.executeJavaScript(
+        '(async () => { const vid = document.querySelector("video"); if (vid && vid.requestPictureInPicture) { await vid.requestPictureInPicture(); return true;} return false; })()'
+      )
+      if (!usedBuiltIn) {
+        // Fallback to custom PiP window
+        window.api.hide.main()
+        // @ts-ignore
+        window.api.pip.open(url, currentTime)
+      }
+    } catch (error) {
+      console.error('PiP fullscreen failed:', error)
+      window.api.hide.main()
+      // @ts-ignore
+      window.api.pip.open(url, currentTime)
+    }
   }
 
   return (

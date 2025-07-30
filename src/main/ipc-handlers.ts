@@ -29,4 +29,8 @@ export function registerIpcHandlers(): void {
     if (win) win.show()
     return null
   })
+  ipcMain.on('close-pip', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win) win.close()
+  })
 }

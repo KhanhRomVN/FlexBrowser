@@ -7,6 +7,16 @@ const api = {
     open: (url: string, currentTime?: number) =>
       ipcRenderer.invoke('open-pip-window', url, currentTime)
   },
+  getVideoInfoForPip: () => {
+    const video = document.querySelector('video')
+    if (video) {
+      return {
+        src: video.currentSrc || video.src,
+        currentTime: video.currentTime
+      }
+    }
+    return null
+  },
   moveWindow: (x: number, y: number) => ipcRenderer.send('move-pip-window', x, y),
   hide: {
     main: () => ipcRenderer.invoke('hide-main-window')

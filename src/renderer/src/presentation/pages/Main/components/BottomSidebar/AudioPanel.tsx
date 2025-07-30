@@ -45,15 +45,9 @@ const AudioPanel: React.FC<AudioPanelProps> = ({
               <Button variant="ghost" size="icon" onClick={() => pauseTab(tabId)}>
                 <Trash2 className="h-4 w-4" />
               </Button>
-              {(/\.(mp4|webm|ogg)$/.test(state.url) || /youtube\.com/.test(state.url)) && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => openFullscreen(state.url, tabId)}
-                >
-                  <Film className="h-4 w-4" />
-                </Button>
-              )}
+              <Button variant="ghost" size="icon" onClick={() => openFullscreen(state.url, tabId)}>
+                <Film className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         )
