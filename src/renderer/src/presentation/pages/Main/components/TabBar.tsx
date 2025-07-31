@@ -53,7 +53,7 @@ const SortableTabItem: React.FC<{
       {...attributes}
       {...listeners}
       onClick={() => onTabChange(tab.id)}
-      className={`flex items-center px-3 py-2 mr-1 rounded-t-md transition-all cursor-grab ${
+      className={`flex items-center px-3 py-2 mr-1 rounded-t-md transition-all cursor-pointer ${
         activeTabId === tab.id
           ? 'bg-background border-t-2 border-primary'
           : 'hover:bg-gray-200 dark:hover:bg-gray-700'
@@ -106,7 +106,7 @@ const TabBar: React.FC<TabBarProps> = ({
       tab.url.toLowerCase().includes(search.toLowerCase())
   )
 
-  const sensors = useSensors(useSensor(PointerSensor))
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
