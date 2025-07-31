@@ -178,7 +178,7 @@ const BottomSidebar: React.FC = () => {
         setGuest={setGuest}
         confirmAdd={confirmAdd}
       />
-      <div className="fixed bottom-0 left-0 right-0 h-14 bg-background flex items-center justify-between px-3 z-50">
+      <div className="fixed bottom-0 left-0 right-0 h-12 bg-[#18171c] shadow-[0_-4px_8px_-2px_#0a9abb] flex items-center justify-between px-2 z-50">
         <AvatarList
           accounts={accounts}
           activeAccountId={activeAccountId}
@@ -194,7 +194,7 @@ const BottomSidebar: React.FC = () => {
             className="rounded-[8px]"
             onClick={() => setShowAccountManager(true)}
           >
-            <Menu className="h-6 w-6" />
+            <Menu className="h-5 w-5" />
           </Button>
           <Button
             variant="ghost"
@@ -202,7 +202,7 @@ const BottomSidebar: React.FC = () => {
             className="rounded-[8px]"
             onClick={() => setShowSettings(true)}
           >
-            <Settings className="h-6 w-6" />
+            <Settings className="h-5 w-5" />
           </Button>
           <AudioPanel
             playingTabs={playingTabs}

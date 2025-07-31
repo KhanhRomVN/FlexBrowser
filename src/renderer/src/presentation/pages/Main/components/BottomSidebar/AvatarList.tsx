@@ -1,5 +1,4 @@
 import React from 'react'
-import { Avatar, AvatarImage, AvatarFallback } from '../../../../../components/ui/avatar'
 import { Button } from '../../../../../components/ui/button'
 import { X } from 'lucide-react'
 
@@ -29,26 +28,26 @@ const AvatarList: React.FC<AvatarListProps> = ({
   <div className="flex items-center space-x-2 overflow-x-auto scrollbar-hide flex-1">
     {accounts.slice(0, 10).map((acc) => (
       <div key={acc.id} className="relative">
-        <Avatar
-          className={`w-8 h-8 rounded-[8px] cursor-pointer transition-colors ${
-            activeAccountId === acc.id
-              ? 'bg-primary text-primary-foreground scale-110'
-              : 'opacity-80 hover:bg-primary hover:text-primary-foreground'
-          }`}
+        <div
           onClick={() => setActiveAccount(acc.id)}
           onContextMenu={(e) => {
             e.preventDefault()
             setAvatarToDelete(acc.id)
           }}
+          className={`w-8 h-8 rounded-[8px] cursor-pointer transition-colors bg-center bg-cover flex items-center justify-center text-white ${
+            activeAccountId === acc.id
+              ? 'ring-2 ring-[#222026] bg-[#4381e2] scale-110'
+              : 'bg-[#222026] bg-opacity-80 hover:bg-[#4381e2] hover:bg-opacity-100'
+          }`}
+          style={{ backgroundImage: `url(${acc.avatarUrl})` }}
         >
-          <AvatarImage src={acc.avatarUrl} alt={acc.name} />
-          <AvatarFallback>{acc.name.charAt(0)}</AvatarFallback>
-        </Avatar>
+          <span className="text-white font-bold z-10">{acc.name.charAt(0)}</span>
+        </div>
         {avatarToDelete === acc.id && (
           <Button
             variant="ghost"
             size="icon"
-            className="absolute -top-1 -right-1 bg-background rounded-full"
+            className="absolute -top-1 -right-1 bg-background text-white rounded-full"
             onClick={() => {
               setAvatarToDelete(null)
               deleteAccount(acc.id)

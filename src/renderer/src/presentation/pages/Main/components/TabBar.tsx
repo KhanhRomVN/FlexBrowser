@@ -118,7 +118,7 @@ const TabBar: React.FC<TabBarProps> = ({
   }
 
   return (
-    <div className="flex items-center bg-gray-100 dark:bg-gray-800 px-2">
+    <div className="flex items-center bg-[#18171c] px-2">
       {/* menu */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

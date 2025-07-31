@@ -17,7 +17,6 @@ import {
 } from '../../../components/ui/dialog'
 import { Input } from '../../../components/ui/input'
 import { Button } from '../../../components/ui/button'
-import { Music, PictureInPicture } from 'lucide-react'
 import { useGlobalAudioStore } from '../../../store/useGlobalAudioStore'
 
 const DEFAULT_URL = 'https://www.google.com'
@@ -36,7 +35,7 @@ const MainPage: React.FC = () => {
   const clearAudioState = useGlobalAudioStore((state) => state.clearAudioState)
 
   const isElectron = !!(window as any).process?.versions?.electron
-  const [isOpeningPip, setIsOpeningPip] = useState(false)
+  const [isOpeningPip] = useState(false)
   const [showInit, setShowInit] = useState(accounts.length === 0)
   const [initName, setInitName] = useState('')
 
@@ -103,18 +102,6 @@ const MainPage: React.FC = () => {
   const tabs = accounts.find((acc) => acc.id === activeAccountId)?.tabs || []
   const activeTabId = accounts.find((acc) => acc.id === activeAccountId)?.activeTabId || ''
   const activeUrl = tabs.find((t) => t.id === activeTabId)?.url || DEFAULT_URL
-  const isYouTubeMedia = /youtu\.be/.test(activeUrl) || /youtube\.com/.test(activeUrl)
-  const isNetflix = /netflix\.com/.test(activeUrl)
-  const isPrimeVideo = /primevideo\.com/.test(activeUrl)
-  const isDisneyPlus = /disneyplus\.com/.test(activeUrl)
-
-  const shouldShowPip =
-    isElectron &&
-    (isYouTubeMedia ||
-      isNetflix ||
-      isPrimeVideo ||
-      isDisneyPlus ||
-      /\.(mp4|webm|ogg|mp3|wav)(\?.*)?$/.test(activeUrl))
 
   // Show account creation dialog if no accounts
   if (showInit) {
@@ -156,34 +143,6 @@ const MainPage: React.FC = () => {
           <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="text-white text-lg">Preparing video...</div>
           </div>
-        )}
-
-        {shouldShowPip && (
-          <Button
-            size="icon"
-            title="Picture-in-Picture"
-            variant="ghost"
-            className="absolute top-2 right-2 z-50"
-            onClick={async () => {
-              setIsOpeningPip(true)
-              try {
-                const webview = document.getElementById(`webview-${activeTabId}`) as any
-                const usedBuiltIn = await webview.executeJavaScript(
-                  '(async () => { const vid = document.querySelector("video"); if (vid && vid.requestPictureInPicture) { await vid.requestPictureInPicture(); return true; } return false; })()'
-                )
-                if (!usedBuiltIn) {
-                  window.api.pip.open(activeUrl)
-                }
-              } catch (e) {
-                console.error('PiP invocation failed:', e)
-                window.api.pip.open(activeUrl)
-              } finally {
-                setIsOpeningPip(false)
-              }
-            }}
-          >
-            <PictureInPicture className="w-6 h-6" />
-          </Button>
         )}
       </div>
 
