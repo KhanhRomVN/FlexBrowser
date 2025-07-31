@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import useAccountStore from '../../../../store/useAccountStore'
 import { useGlobalAudioStore } from '../../../../store/useGlobalAudioStore'
 import { Menu, Settings } from 'lucide-react'
@@ -19,6 +19,22 @@ const BottomSidebar: React.FC = () => {
     addTab,
     setActiveTab
   } = useAccountStore()
+
+  // auto-remove accounts that have no tabs and reassign active account
+  useEffect(() => {
+    // list remaining accounts with at least one tab
+    const remaining = accounts.filter((acc) => acc.tabs.length > 0)
+    // delete accounts with no tabs
+    accounts.forEach((acc) => {
+      if (acc.tabs.length === 0) {
+        deleteAccount(acc.id)
+      }
+    })
+    // if active account removed or has no tabs, pick the last remaining
+    if (!remaining.some((acc) => acc.id === activeAccountId) && remaining.length > 0) {
+      setActiveAccount(remaining[remaining.length - 1].id)
+    }
+  }, [accounts, deleteAccount, activeAccountId, setActiveAccount])
   const audioStates = useGlobalAudioStore((s) => s.audioStates)
   const clearAudioState = useGlobalAudioStore((s) => s.clearAudioState)
   const playingTabs = Object.entries(audioStates).filter(([_, s]) => s.isPlaying)

@@ -119,6 +119,7 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
               <webview
                 id={`webview-${tab.id}`}
                 key={`${acc.id}-${tab.id}`}
+                partition={acc.guest ? `session:${acc.id}` : `persist:${acc.id}`}
                 src={tab.url}
                 allowpopups
                 ref={acc.id === activeAccountId && tab.id === activeTabId ? webviewRef : undefined}
@@ -131,6 +132,7 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
         ) : (
           <webview
             id={`webview-${tabId}`}
+            partition={`session:${tabId}`}
             ref={webviewRef}
             src={url}
             allowpopups

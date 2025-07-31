@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import '../../../styles.css'
 import useAccountStore from '../../../store/useAccountStore'
+import type { Tab } from '../../../store/useAccountStore'
 import TabBar from './components/TabBar'
 import WebviewContainer from '../../../components/Container/WebviewContainer'
 import BottomSidebar from './components/BottomSidebar'
@@ -29,7 +30,8 @@ const MainPage: React.FC = () => {
     addTab,
     setActiveAccount,
     setActiveTab,
-    deleteTab
+    deleteTab,
+    reorderTabs
   } = useAccountStore()
   const clearAudioState = useGlobalAudioStore((state) => state.clearAudioState)
 
@@ -92,6 +94,12 @@ const MainPage: React.FC = () => {
     }
   }
 
+  const handleReorderTabs = (newTabs: Tab[]) => {
+    if (activeAccountId) {
+      reorderTabs(activeAccountId, newTabs)
+    }
+  }
+
   const tabs = accounts.find((acc) => acc.id === activeAccountId)?.tabs || []
   const activeTabId = accounts.find((acc) => acc.id === activeAccountId)?.activeTabId || ''
   const activeUrl = tabs.find((t) => t.id === activeTabId)?.url || DEFAULT_URL
@@ -138,6 +146,7 @@ const MainPage: React.FC = () => {
         onTabChange={handleTabChange}
         onDeleteTab={handleDeleteTab}
         onNewTab={handleNewTab}
+        onReorder={handleReorderTabs}
       />
 
       <div className="flex-1 h-full overflow-hidden relative">

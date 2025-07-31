@@ -7,6 +7,7 @@ import { electronApp, optimizer } from '@electron-toolkit/utils'
 
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.electron')
+  app.setLoginItemSettings({ openAtLogin: true })
   createMainWindow()
   registerShortcuts(getMainWindow)
   registerIpcHandlers()

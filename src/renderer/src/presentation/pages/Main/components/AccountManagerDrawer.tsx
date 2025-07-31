@@ -28,6 +28,10 @@ const AccountManagerDrawer: React.FC<AccountManagerDrawerProps> = ({ open, onOpe
     addTab,
     setActiveTab
   } = useAccountStore()
+  // count synced vs guest and activePresence (has tabs)
+  const realCount = accounts.filter((acc) => !acc.guest).length
+  const guestCount = accounts.filter((acc) => acc.guest).length
+  const activeCount = accounts.filter((acc) => acc.tabs.length > 0).length
 
   const [name, setName] = React.useState('')
   const [guest, setGuest] = React.useState(false)
@@ -62,8 +66,13 @@ const AccountManagerDrawer: React.FC<AccountManagerDrawerProps> = ({ open, onOpe
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="p-0 w-[400px]">
         <div className="flex flex-col h-full bg-background text-foreground">
-          <SheetHeader className="flex items-center justify-between p-4 border-b">
+          <SheetHeader className="flex flex-col items-start p-4 border-b space-y-1">
             <SheetTitle>Accounts Manager</SheetTitle>
+            <div className="text-xs text-muted-foreground">
+              Total: {accounts.length} (Synced: {realCount}, Guest: {guestCount}, Active:{' '}
+              {activeCount}) | Current:{' '}
+              {accounts.find((acc) => acc.id === activeAccountId)?.name || '—'}
+            </div>
           </SheetHeader>
 
           <div className="flex-1 overflow-auto p-4 space-y-4">
@@ -80,8 +89,17 @@ const AccountManagerDrawer: React.FC<AccountManagerDrawerProps> = ({ open, onOpe
                   </Avatar>
                   <div>
                     <div className="text-sm">{acc.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {acc.guest ? 'Guest Session' : 'Logged In'}
+                    <div
+                      className={`text-xs ${
+                        acc.guest
+                          ? 'text-muted-foreground'
+                          : acc.token
+                            ? 'text-success'
+                            : 'text-warning'
+                      }`}
+                    >
+                      {acc.guest ? 'Guest Session' : acc.token ? 'Synced' : 'Not Synced'}{' '}
+                      {acc.tabs.length > 0 ? '• Active' : '• Inactive'}
                     </div>
                   </div>
                 </div>

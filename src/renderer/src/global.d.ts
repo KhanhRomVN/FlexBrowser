@@ -1,5 +1,6 @@
 import React from 'react'
 import { WebviewTag } from 'electron'
+declare module '@dnd-kit/modifiers'
 
 declare global {
   namespace JSX {
@@ -29,3 +30,8 @@ declare global {
 }
 
 export {}
+
+// DnD Kit modules (no bundled types)
+declare module '@dnd-kit/core'
+declare module '@dnd-kit/sortable'
+declare module '@dnd-kit/utilities'

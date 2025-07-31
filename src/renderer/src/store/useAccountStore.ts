@@ -33,6 +33,7 @@ interface AccountState {
   setActiveTab: (accountId: string, tabId: string) => void
   deleteAccount: (id: string) => void
   deleteTab: (accountId: string, tabId: string) => void
+  reorderTabs: (accountId: string, newTabs: Tab[]) => void
   updateTab: (accountId: string, tabId: string, updates: Partial<Tab>) => void
   renameAccount: (id: string, name: string) => void
 }
@@ -94,6 +95,12 @@ const useAccountStore = create<AccountState>()(
             }
             return { ...acc, tabs: newTabs, activeTabId: newActiveTabId }
           })
+        })),
+      reorderTabs: (accountId: string, newTabs: Tab[]) =>
+        set((state) => ({
+          accounts: state.accounts.map((acc) =>
+            acc.id === accountId ? { ...acc, tabs: newTabs } : acc
+          )
         })),
       updateTab: (accountId, tabId, updates) =>
         set((state) => ({
