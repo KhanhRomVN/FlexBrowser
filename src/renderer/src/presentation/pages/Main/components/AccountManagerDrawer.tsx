@@ -68,13 +68,7 @@ const AccountManagerDrawer: React.FC<AccountManagerDrawerProps> = ({ open, onOpe
         <div className="flex flex-col h-full bg-background text-foreground">
           <SheetHeader className="flex flex-col items-start p-4 border-b space-y-1">
             <SheetTitle>Accounts Manager</SheetTitle>
-            <div className="text-xs text-muted-foreground">
-              Total: {accounts.length} (Synced: {realCount}, Guest: {guestCount}, Active:{' '}
-              {activeCount}) | Current:{' '}
-              {accounts.find((acc) => acc.id === activeAccountId)?.name || '—'}
-            </div>
           </SheetHeader>
-
           <div className="flex-1 overflow-auto p-4 space-y-4">
             {accounts.map((acc, idx) => (
               <div

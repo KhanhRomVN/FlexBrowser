@@ -188,6 +188,12 @@ const BottomSidebar: React.FC = () => {
     }
   }
   const [searchQuery, setSearchQuery] = useState('')
+  // keep search bar in sync with the active tab's URL
+  useEffect(() => {
+    const acc = accounts.find((acc) => acc.id === activeAccountId)
+    const tab = acc?.tabs.find((t) => t.id === acc.activeTabId)
+    if (tab) setSearchQuery(tab.url)
+  }, [activeAccountId, accounts])
   const goBack = () => {
     const acc = accounts.find((acc) => acc.id === activeAccountId)
     const tabId = acc?.activeTabId
@@ -210,11 +216,35 @@ const BottomSidebar: React.FC = () => {
     if (el?.reload) el.reload()
   }
   const handleSearch = (value: string) => {
+    const trimmed = value.trim()
+    if (!trimmed) return
     const acc = accounts.find((acc) => acc.id === activeAccountId)
-    const tabId = acc?.activeTabId
-    if (!tabId) return
-    const el = document.getElementById(`webview-${tabId}`) as any
-    el?.loadURL && el.loadURL(value)
+    if (!acc) return
+    let loadUrl: string
+    let createNew = false
+    try {
+      new URL(trimmed)
+      loadUrl = trimmed
+    } catch {
+      // Treat as search query on Google
+      loadUrl = `https://www.google.com/search?q=${encodeURIComponent(trimmed)}`
+      createNew = true
+    }
+    let targetTabId = acc.activeTabId as string
+    if (createNew) {
+      const newTabId = `${acc.id}-search-${Date.now()}`
+      addTab(acc.id, {
+        id: newTabId,
+        title: trimmed,
+        url: loadUrl,
+        icon: `https://www.google.com/s2/favicons?domain=${new URL(loadUrl).hostname}`
+      })
+      setActiveTab(acc.id, newTabId)
+      targetTabId = newTabId
+    }
+    const webview = document.getElementById(`webview-${targetTabId}`) as any
+    if (webview?.loadURL) webview.loadURL(loadUrl)
+    setSearchQuery(trimmed)
   }
 
   return (
@@ -280,7 +310,7 @@ const BottomSidebar: React.FC = () => {
           >
             <RotateCw className="h-4 w-4" />
           </Button>
-          <div className="relative">
+          <div className="relative max-w-[20rem]">
             <Input
               value={searchQuery}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
@@ -288,12 +318,6 @@ const BottomSidebar: React.FC = () => {
               placeholder="Search in tab..."
               className="h-8 w-full max-w-[20rem] focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 rounded-[8px]"
             />
-            <div
-              className="absolute right-3 top-1/2 -translate-y-1/2"
-              onClick={() => handleSearch(searchQuery)}
-            >
-              <Search className="h-4 w-4" />
-            </div>
           </div>
         </div>
         <div className="flex space-x-2">

@@ -18,6 +18,7 @@ declare global {
 
   interface Window {
     api: {
+      history: any
       app: {
         quit: () => Promise<void>
       }
