@@ -19,8 +19,6 @@ import { Input } from '../../../components/ui/input'
 import { Button } from '../../../components/ui/button'
 import { useGlobalAudioStore } from '../../../store/useGlobalAudioStore'
 
-const DEFAULT_URL = 'https://www.google.com'
-
 const MainPage: React.FC = () => {
   const {
     accounts,
@@ -32,10 +30,12 @@ const MainPage: React.FC = () => {
     deleteTab,
     reorderTabs
   } = useAccountStore()
+
   const clearAudioState = useGlobalAudioStore((state) => state.clearAudioState)
 
-  const isElectron = !!(window as any).process?.versions?.electron
-  const [isOpeningPip] = useState(false)
+  // Always load the local New Tab extension page
+  const defaultUrl = `file://${(window as any).api.getCwd()}/src/extensions/FlexBookmark/src/content/newtab/newtab.html`
+
   const [showInit, setShowInit] = useState(accounts.length === 0)
   const [initName, setInitName] = useState('')
 
@@ -58,15 +58,15 @@ const MainPage: React.FC = () => {
     })
     setActiveAccount(accountId)
 
-    const host = new URL(DEFAULT_URL).hostname
-    const tabId = `${accountId}-tab`
+    // create initial bookmarks tab
+    const newTabId = `${accountId}-${crypto.randomUUID()}`
     addTab(accountId, {
-      id: tabId,
-      title: host,
-      url: DEFAULT_URL,
-      icon: `https://www.google.com/s2/favicons?domain=${host}`
+      id: newTabId,
+      title: 'Bookmarks',
+      url: defaultUrl,
+      icon: ''
     })
-    setActiveTab(accountId, tabId)
+    setActiveTab(accountId, newTabId)
     setShowInit(false)
   }
 
@@ -75,9 +75,9 @@ const MainPage: React.FC = () => {
     const newTabId = `${activeAccountId}-${crypto.randomUUID()}`
     addTab(activeAccountId, {
       id: newTabId,
-      title: new URL(DEFAULT_URL).hostname,
-      url: DEFAULT_URL,
-      icon: `https://www.google.com/s2/favicons?domain=${new URL(DEFAULT_URL).hostname}`
+      title: 'Bookmarks',
+      url: defaultUrl,
+      icon: ''
     })
     setActiveTab(activeAccountId, newTabId)
   }
@@ -94,14 +94,12 @@ const MainPage: React.FC = () => {
   }
 
   const handleReorderTabs = (newTabs: Tab[]) => {
-    if (activeAccountId) {
-      reorderTabs(activeAccountId, newTabs)
-    }
+    if (activeAccountId) reorderTabs(activeAccountId, newTabs)
   }
 
   const tabs = accounts.find((acc) => acc.id === activeAccountId)?.tabs || []
   const activeTabId = accounts.find((acc) => acc.id === activeAccountId)?.activeTabId || ''
-  const activeUrl = tabs.find((t) => t.id === activeTabId)?.url || DEFAULT_URL
+  const activeUrl = tabs.find((t) => t.id === activeTabId)?.url || defaultUrl
 
   // Show account creation dialog if no accounts
   if (showInit) {
@@ -137,13 +135,7 @@ const MainPage: React.FC = () => {
       />
 
       <div className="flex-1 h-full overflow-hidden relative">
-        <WebviewContainer url={activeUrl} isElectron={isElectron} tabId={activeTabId} />
-
-        {isOpeningPip && (
-          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="text-white text-lg">Preparing video...</div>
-          </div>
-        )}
+        <WebviewContainer url={activeUrl} isElectron={true} tabId={activeTabId} />
       </div>
 
       <BottomSidebar />

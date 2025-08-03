@@ -23,7 +23,8 @@ const api = {
   },
   show: {
     main: () => ipcRenderer.invoke('show-main-window')
-  }
+  },
+  getCwd: () => process.cwd()
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

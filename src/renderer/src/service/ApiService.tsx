@@ -253,6 +253,15 @@ class ApiService {
     this.cachedToken = null
     localStorage.removeItem('access_token')
   }
+
+  /**
+   * Fetch Google-synced bookmarks for a real account.
+   * @param accountId Google account identifier
+   */
+  public async getBookmarks(accountId: string): Promise<any> {
+    // Bookmarks endpoint does not require authentication token
+    return this.get(`/accounts/${accountId}/bookmarks`, false)
+  }
 }
 
 export default ApiService.getInstance()

@@ -14,6 +14,7 @@ declare global {
       show: {
         main(): Promise<unknown>
       }
+      getCwd(): string
     }
   }
 }

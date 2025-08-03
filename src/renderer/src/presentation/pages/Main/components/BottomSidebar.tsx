@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import useAccountStore from '../../../../store/useAccountStore'
 import { useGlobalAudioStore } from '../../../../store/useGlobalAudioStore'
-import { Menu, Settings } from 'lucide-react'
+import { User, MoreHorizontal } from 'lucide-react'
 import { Button } from '../../../../components/ui/button'
 import AccountManagerDrawer from './AccountManagerDrawer'
 import SettingDrawer from './SettingDrawer'
 import AvatarList from './BottomSidebar/AvatarList'
 import AddAccountDialog from './BottomSidebar/AddAccountDialog'
+import { MainMenu } from './MainMenu'
 import AudioPanel from './BottomSidebar/AudioPanel'
 
 const BottomSidebar: React.FC = () => {
@@ -45,6 +46,7 @@ const BottomSidebar: React.FC = () => {
   const [guest, setGuest] = useState(false)
   const [showAccountManager, setShowAccountManager] = useState(false)
   const [avatarToDelete, setAvatarToDelete] = useState<string | null>(null)
+  const [showMainMenu, setShowMainMenu] = useState(false)
 
   const url = 'https://www.google.com'
 
@@ -167,6 +169,7 @@ const BottomSidebar: React.FC = () => {
 
   return (
     <>
+      <MainMenu open={showMainMenu} onOpenChange={setShowMainMenu} />
       <AccountManagerDrawer open={showAccountManager} onOpenChange={setShowAccountManager} />
       <SettingDrawer open={showSettings} onOpenChange={setShowSettings} />
       <AddAccountDialog
@@ -194,15 +197,15 @@ const BottomSidebar: React.FC = () => {
             className="rounded-[8px]"
             onClick={() => setShowAccountManager(true)}
           >
-            <Menu className="h-5 w-5" />
+            <User className="h-5 w-5" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
             className="rounded-[8px]"
-            onClick={() => setShowSettings(true)}
+            onClick={() => setShowMainMenu(true)}
           >
-            <Settings className="h-5 w-5" />
+            <MoreHorizontal className="h-5 w-5" />
           </Button>
           <AudioPanel
             playingTabs={playingTabs}
