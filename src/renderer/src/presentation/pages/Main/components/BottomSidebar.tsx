@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import useAccountStore from '../../../../store/useAccountStore'
 import { useGlobalAudioStore } from '../../../../store/useGlobalAudioStore'
-import { User, MoreHorizontal } from 'lucide-react'
+import { User, MoreHorizontal, ArrowLeft, ArrowRight, RotateCw, Search } from 'lucide-react'
 import { Button } from '../../../../components/ui/button'
 import AccountManagerDrawer from './AccountManagerDrawer'
 import SettingDrawer from './SettingDrawer'
@@ -9,6 +9,7 @@ import AvatarList from './BottomSidebar/AvatarList'
 import AddAccountDialog from './BottomSidebar/AddAccountDialog'
 import { MainMenu } from './MainMenu'
 import AudioPanel from './BottomSidebar/AudioPanel'
+import { Input } from '../../../../components/ui/input'
 
 const BottomSidebar: React.FC = () => {
   const {
@@ -166,6 +167,35 @@ const BottomSidebar: React.FC = () => {
       window.api.pip.open(mediaSrc, currentTime)
     }
   }
+  const [searchQuery, setSearchQuery] = useState('')
+  const goBack = () => {
+    const acc = accounts.find((acc) => acc.id === activeAccountId)
+    const tabId = acc?.activeTabId
+    if (!tabId) return
+    const el = document.getElementById(`webview-${tabId}`) as any
+    if (el?.goBack) el.goBack()
+  }
+  const goForward = () => {
+    const acc = accounts.find((acc) => acc.id === activeAccountId)
+    const tabId = acc?.activeTabId
+    if (!tabId) return
+    const el = document.getElementById(`webview-${tabId}`) as any
+    if (el?.goForward) el.goForward()
+  }
+  const reload = () => {
+    const acc = accounts.find((acc) => acc.id === activeAccountId)
+    const tabId = acc?.activeTabId
+    if (!tabId) return
+    const el = document.getElementById(`webview-${tabId}`) as any
+    if (el?.reload) el.reload()
+  }
+  const handleSearch = (value: string) => {
+    const acc = accounts.find((acc) => acc.id === activeAccountId)
+    const tabId = acc?.activeTabId
+    if (!tabId) return
+    const el = document.getElementById(`webview-${tabId}`) as any
+    el?.loadURL && el.loadURL(value)
+  }
 
   return (
     <>
@@ -182,14 +212,42 @@ const BottomSidebar: React.FC = () => {
         confirmAdd={confirmAdd}
       />
       <div className="fixed bottom-0 left-0 right-0 h-12 bg-[#18171c] shadow-[0_-4px_8px_-2px_#0a9abb] flex items-center justify-between px-2 z-50">
-        <AvatarList
-          accounts={accounts}
-          activeAccountId={activeAccountId}
-          setActiveAccount={setActiveAccount}
-          avatarToDelete={avatarToDelete}
-          setAvatarToDelete={setAvatarToDelete}
-          deleteAccount={deleteAccount}
-        />
+        <div className="flex items-center space-x-2">
+          <AvatarList
+            accounts={accounts}
+            activeAccountId={activeAccountId}
+            setActiveAccount={setActiveAccount}
+            avatarToDelete={avatarToDelete}
+            setAvatarToDelete={setAvatarToDelete}
+            deleteAccount={deleteAccount}
+          />
+          <Button variant="ghost" size="icon" className="rounded-[8px]" onClick={goBack}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="rounded-[8px]" onClick={goForward}>
+            <ArrowRight className="h-5 w-5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="rounded-[8px]" onClick={reload}>
+            <RotateCw className="h-5 w-5" />
+          </Button>
+          <div className="relative">
+            <Input
+              value={searchQuery}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch(searchQuery)}
+              placeholder="Search in tab..."
+              className="w-36"
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-1/2 -translate-y-1/2"
+              onClick={() => handleSearch(searchQuery)}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
         <div className="flex space-x-2">
           <Button
             variant="ghost"
