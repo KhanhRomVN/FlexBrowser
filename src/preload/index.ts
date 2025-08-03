@@ -17,6 +17,10 @@ const api = {
     }
     return null
   },
+  auth: {
+    /** Initiate Google sign-in for accountId, returns OAuth token */
+    loginGoogle: (accountId: string) => ipcRenderer.invoke('login-google', accountId)
+  },
   moveWindow: (x: number, y: number) => ipcRenderer.send('move-pip-window', x, y),
   hide: {
     main: () => ipcRenderer.invoke('hide-main-window')

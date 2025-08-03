@@ -1,4 +1,5 @@
-import React from 'react'
+import React, { useState } from 'react'
+import useAccountStore from '../../../../store/useAccountStore'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -24,6 +25,35 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onOpenHistory,
   onOpenPasswords
 }) => {
+  // Account sign-in
+  const activeAccountId = useAccountStore((state) => state.activeAccountId)
+  const accounts = useAccountStore((state) => state.accounts)
+  const addTab = useAccountStore((state) => state.addTab)
+  const setActiveTab = useAccountStore((state) => state.setActiveTab)
+  const setToken = useAccountStore((state) => state.setToken)
+  // current signed-in account
+  const activeAccount = accounts.find((acc) => acc.id === activeAccountId)
+  // display email if OAuth token set, else display account name or Sign In
+  const displayLabel = activeAccount?.token
+    ? activeAccount.token
+    : activeAccount
+      ? activeAccount.name
+      : 'Sign In'
+
+  const handleSignIn = async () => {
+    if (!activeAccountId) return
+    try {
+      const token = await window.api.auth.loginGoogle(activeAccountId)
+      if (typeof token === 'string') {
+        setToken(activeAccountId, token)
+      }
+    } catch (error) {
+      console.error('Login failed:', error)
+    } finally {
+      onOpenChange(false)
+    }
+  }
+  const [zoom, setZoom] = useState<number>(100)
   return (
     <DropdownMenu open={open} onOpenChange={onOpenChange}>
       {/* Invisible trigger, controlled externally */}
@@ -34,26 +64,25 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         <DropdownMenuLabel className="px-2 py-1 font-semibold">
           Sync and save data
         </DropdownMenuLabel>
-        <DropdownMenuItem className="px-2 py-1">Sign In</DropdownMenuItem>
+        <DropdownMenuItem className="px-2 py-1" onClick={!activeAccount ? handleSignIn : undefined}>
+          {activeAccount ? activeAccount.name : 'Sign In'}
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
 
         <DropdownMenuLabel className="px-2 py-1 font-semibold">Tab và cửa sổ</DropdownMenuLabel>
-        <DropdownMenuItem className="px-2 py-1">
+        <DropdownMenuItem
+          className="px-2 py-1"
+          onClick={() => {
+            window.api.tab.newTab()
+            onOpenChange(false)
+          }}
+        >
           New tab
           <DropdownMenuShortcut>Ctrl+T</DropdownMenuShortcut>
-        </DropdownMenuItem>
-        <DropdownMenuItem className="px-2 py-1">
-          New window
-          <DropdownMenuShortcut>Ctrl+N</DropdownMenuShortcut>
-        </DropdownMenuItem>
-        <DropdownMenuItem className="px-2 py-1">
-          New private window
-          <DropdownMenuShortcut>Ctrl+Shift+P</DropdownMenuShortcut>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
 
         <DropdownMenuLabel className="px-2 py-1 font-semibold">Truy cập nhanh</DropdownMenuLabel>
-        <DropdownMenuItem className="px-2 py-1">Bookmarks</DropdownMenuItem>
         <DropdownMenuItem
           className="px-2 py-1"
           onClick={() => {
@@ -89,32 +118,78 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         <DropdownMenuSeparator />
 
         <DropdownMenuLabel className="px-2 py-1 font-semibold">Trang và nội dung</DropdownMenuLabel>
-        <DropdownMenuItem className="px-2 py-1">
+        <DropdownMenuItem
+          className="px-2 py-1"
+          onClick={() => {
+            window.api.page.print()
+            onOpenChange(false)
+          }}
+        >
           Print…
           <DropdownMenuShortcut>Ctrl+P</DropdownMenuShortcut>
         </DropdownMenuItem>
-        <DropdownMenuItem className="px-2 py-1">
+        <DropdownMenuItem
+          className="px-2 py-1"
+          onClick={() => {
+            window.api.page.save()
+            onOpenChange(false)
+          }}
+        >
           Save page as…
           <DropdownMenuShortcut>Ctrl+S</DropdownMenuShortcut>
         </DropdownMenuItem>
-        <DropdownMenuItem className="px-2 py-1">
+        <DropdownMenuItem
+          className="px-2 py-1"
+          onClick={() => {
+            window.api.page.find()
+            onOpenChange(false)
+          }}
+        >
           Find in page…
           <DropdownMenuShortcut>Ctrl+F</DropdownMenuShortcut>
         </DropdownMenuItem>
-        <DropdownMenuItem className="px-2 py-1">Translate page…</DropdownMenuItem>
+        <DropdownMenuItem
+          className="px-2 py-1"
+          onClick={() => {
+            window.api.page.translate()
+            onOpenChange(false)
+          }}
+        >
+          Translate page…
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
 
         <DropdownMenuLabel className="px-2 py-1 font-semibold">Zoom</DropdownMenuLabel>
         <div className="flex items-center justify-between px-2 py-1">
           <span>Zoom out (−)</span>
-          <button className="text-sm">−</button>
+          <button
+            className="text-sm"
+            onClick={() => {
+              const newZoom = Math.max(10, zoom - 10)
+              window.api.zoom.setLevel(newZoom)
+              setZoom(newZoom)
+              onOpenChange(false)
+            }}
+          >
+            −
+          </button>
         </div>
         <div className="flex items-center justify-between px-2 py-1">
           <span>Current zoom (100%)</span>
         </div>
         <div className="flex items-center justify-between px-2 py-1">
           <span>Zoom in (+)</span>
-          <button className="text-sm">+</button>
+          <button
+            className="text-sm"
+            onClick={() => {
+              const newZoom = Math.min(500, zoom + 10)
+              window.api.zoom.setLevel(newZoom)
+              setZoom(newZoom)
+              onOpenChange(false)
+            }}
+          >
+            +
+          </button>
         </div>
         <DropdownMenuItem className="px-2 py-1">
           Full screen
@@ -137,7 +212,12 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         <DropdownMenuSeparator />
 
         <DropdownMenuLabel className="px-2 py-1 font-semibold">Thoát</DropdownMenuLabel>
-        <DropdownMenuItem className="px-2 py-1">
+        <DropdownMenuItem
+          className="px-2 py-1"
+          onClick={() => {
+            window.api.app.quit()
+          }}
+        >
           Quit
           <DropdownMenuShortcut>Ctrl+Q</DropdownMenuShortcut>
         </DropdownMenuItem>

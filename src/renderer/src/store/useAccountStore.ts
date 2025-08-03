@@ -36,6 +36,8 @@ interface AccountState {
   reorderTabs: (accountId: string, newTabs: Tab[]) => void
   updateTab: (accountId: string, tabId: string, updates: Partial<Tab>) => void
   renameAccount: (id: string, name: string) => void
+  /** Set OAuth token for an account */
+  setToken: (id: string, token: string) => void
 }
 
 const useAccountStore = create<AccountState>()(
@@ -116,6 +118,13 @@ const useAccountStore = create<AccountState>()(
       renameAccount: (id, name) =>
         set((state) => ({
           accounts: state.accounts.map((acc) => (acc.id === id ? { ...acc, name } : acc))
+        })),
+      /**
+       * Set OAuth token for an account
+       */
+      setToken: (id: string, token: string) =>
+        set((state) => ({
+          accounts: state.accounts.map((acc) => (acc.id === id ? { ...acc, token } : acc))
         }))
     }),
     {

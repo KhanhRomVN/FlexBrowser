@@ -18,6 +18,11 @@ declare global {
 
   interface Window {
     api: {
+      app: any
+      zoom: any
+      tab: any
+      page: any
+      auth: any
       show: any
       pip: {
         open: (url: string) => Promise<void>

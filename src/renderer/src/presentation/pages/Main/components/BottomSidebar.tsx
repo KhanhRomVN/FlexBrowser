@@ -16,9 +16,6 @@ import AddAccountDialog from './BottomSidebar/AddAccountDialog'
 import { MainMenu } from './MainMenu'
 import AudioPanel from './BottomSidebar/AudioPanel'
 import { Input } from '../../../../components/ui/input'
-import DownloadDrawer from './DownloadDrawer'
-import HistoryDrawer from './HistoryDrawer'
-import PasswordDrawer from './PasswordDrawer'
 
 const BottomSidebar: React.FC = () => {
   const {
@@ -67,11 +64,10 @@ const BottomSidebar: React.FC = () => {
   const [name, setName] = useState('')
   const [guest, setGuest] = useState(false)
   const [showAccountManager, setShowAccountManager] = useState(false)
-  const [avatarToDelete, setAvatarToDelete] = useState<string | null>(null)
   const [showMainMenu, setShowMainMenu] = useState(false)
-  const [showDownloads, setShowDownloads] = useState(false)
-  const [showHistory, setShowHistory] = useState(false)
-  const [showPasswords, setShowPasswords] = useState(false)
+  const [, setShowDownloads] = useState(false)
+  const [, setShowHistory] = useState(false)
+  const [, setShowPasswords] = useState(false)
 
   const url = 'https://www.google.com'
 
@@ -232,9 +228,6 @@ const BottomSidebar: React.FC = () => {
       />
       <AccountManagerDrawer open={showAccountManager} onOpenChange={setShowAccountManager} />
       <SettingDrawer open={showSettings} onOpenChange={setShowSettings} />
-      <DownloadDrawer open={showDownloads} onOpenChange={setShowDownloads} />
-      <HistoryDrawer open={showHistory} onOpenChange={setShowHistory} />
-      <PasswordDrawer open={showPasswords} onOpenChange={setShowPasswords} />
       <AddAccountDialog
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
