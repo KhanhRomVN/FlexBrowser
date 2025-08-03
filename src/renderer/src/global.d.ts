@@ -18,18 +18,35 @@ declare global {
 
   interface Window {
     api: {
-      app: any
-      zoom: any
-      tab: any
-      page: any
-      auth: any
-      show: any
-      pip: {
-        open: (url: string) => Promise<void>
+      app: {
+        quit: () => Promise<void>
+      }
+      zoom: {
+        setLevel: (level: number) => Promise<void>
+      }
+      tab: {
+        newTab: () => Promise<void>
+      }
+      page: {
+        print: () => Promise<void>
+        save: () => Promise<void>
+        find: () => Promise<void>
+        translate: () => Promise<void>
+      }
+      auth: {
+        loginGoogle: (accountId: string) => Promise<string>
+      }
+      show: {
+        main: () => Promise<void>
       }
       hide: {
         main: () => Promise<void>
       }
+      pip: {
+        open: (url: string, currentTime?: number) => Promise<void>
+      }
+      getVideoInfoForPip: () => { src: string; currentTime: number } | null
+      getCwd: () => string
     }
   }
 }

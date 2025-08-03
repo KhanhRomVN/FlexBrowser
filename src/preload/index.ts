@@ -3,6 +3,21 @@ import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
 const api = {
+  app: {
+    quit: () => ipcRenderer.invoke('app-quit')
+  },
+  zoom: {
+    setLevel: (level: number) => ipcRenderer.invoke('zoom-set-level', level)
+  },
+  tab: {
+    newTab: () => ipcRenderer.invoke('new-tab')
+  },
+  page: {
+    print: () => ipcRenderer.invoke('print-page'),
+    save: () => ipcRenderer.invoke('save-page'),
+    find: () => ipcRenderer.invoke('find-page'),
+    translate: () => ipcRenderer.invoke('translate-page')
+  },
   pip: {
     open: (url: string, currentTime?: number) =>
       ipcRenderer.invoke('open-pip-window', url, currentTime)

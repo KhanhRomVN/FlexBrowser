@@ -1,4 +1,4 @@
-import { ipcMain, BrowserWindow } from 'electron'
+import { app, ipcMain, BrowserWindow } from 'electron'
 import { openPipWindow } from './windows/pipWindow'
 import { getMainWindow } from './windows/mainWindow'
 
@@ -32,5 +32,9 @@ export function registerIpcHandlers(): void {
   ipcMain.on('close-pip', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (win) win.close()
+  })
+
+  ipcMain.handle('app-quit', () => {
+    app.quit()
   })
 }
