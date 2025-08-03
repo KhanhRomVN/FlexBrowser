@@ -12,9 +12,18 @@ import {
 interface MainMenuProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onOpenDownloads?: () => void
+  onOpenHistory?: () => void
+  onOpenPasswords?: () => void
 }
 
-export const MainMenu: React.FC<MainMenuProps> = ({ open, onOpenChange }) => {
+export const MainMenu: React.FC<MainMenuProps> = ({
+  open,
+  onOpenChange,
+  onOpenDownloads,
+  onOpenHistory,
+  onOpenPasswords
+}) => {
   return (
     <DropdownMenu open={open} onOpenChange={onOpenChange}>
       {/* Invisible trigger, controlled externally */}
@@ -45,12 +54,34 @@ export const MainMenu: React.FC<MainMenuProps> = ({ open, onOpenChange }) => {
 
         <DropdownMenuLabel className="px-2 py-1 font-semibold">Truy cập nhanh</DropdownMenuLabel>
         <DropdownMenuItem className="px-2 py-1">Bookmarks</DropdownMenuItem>
-        <DropdownMenuItem className="px-2 py-1">History</DropdownMenuItem>
-        <DropdownMenuItem className="px-2 py-1">
+        <DropdownMenuItem
+          className="px-2 py-1"
+          onClick={() => {
+            onOpenChange(false)
+            onOpenHistory?.()
+          }}
+        >
+          History
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="px-2 py-1"
+          onClick={() => {
+            onOpenChange(false)
+            onOpenDownloads?.()
+          }}
+        >
           Downloads
           <DropdownMenuShortcut>Ctrl+Shift+Y</DropdownMenuShortcut>
         </DropdownMenuItem>
-        <DropdownMenuItem className="px-2 py-1">Passwords</DropdownMenuItem>
+        <DropdownMenuItem
+          className="px-2 py-1"
+          onClick={() => {
+            onOpenChange(false)
+            onOpenPasswords?.()
+          }}
+        >
+          Passwords
+        </DropdownMenuItem>
         <DropdownMenuItem className="px-2 py-1">
           Extensions and themes
           <DropdownMenuShortcut>Ctrl+Shift+A</DropdownMenuShortcut>

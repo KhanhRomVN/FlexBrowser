@@ -23,8 +23,8 @@ const AudioPanel: React.FC<AudioPanelProps> = ({
 }) => (
   <Popover>
     <PopoverTrigger asChild>
-      <Button variant="ghost" size="icon" className="rounded-[8px]">
-        <Volume2 className="h-5 w-5" />
+      <Button variant="ghost" size="sm" className="rounded-[8px]">
+        <Volume2 className="h-4 w-4" />
       </Button>
     </PopoverTrigger>
     <PopoverContent className="w-64 max-h-80 overflow-y-auto">
