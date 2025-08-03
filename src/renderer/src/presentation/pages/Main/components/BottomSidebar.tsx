@@ -5,7 +5,13 @@ import { User, MoreHorizontal, ArrowLeft, ArrowRight, RotateCw, Search } from 'l
 import { Button } from '../../../../components/ui/button'
 import AccountManagerDrawer from './AccountManagerDrawer'
 import SettingDrawer from './SettingDrawer'
-import AvatarList from './BottomSidebar/AvatarList'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel
+} from '../../../../components/ui/dropdown-menu'
 import AddAccountDialog from './BottomSidebar/AddAccountDialog'
 import { MainMenu } from './MainMenu'
 import AudioPanel from './BottomSidebar/AudioPanel'
@@ -37,6 +43,18 @@ const BottomSidebar: React.FC = () => {
       setActiveAccount(remaining[remaining.length - 1].id)
     }
   }, [accounts, deleteAccount, activeAccountId, setActiveAccount])
+  // hotkeys 1–9 to switch accounts
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      const num = parseInt(e.key, 10)
+      if (num >= 1 && num <= accounts.length) {
+        const accItem = accounts[num - 1]
+        if (accItem) setActiveAccount(accItem.id)
+      }
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [accounts, setActiveAccount])
   const audioStates = useGlobalAudioStore((s) => s.audioStates)
   const clearAudioState = useGlobalAudioStore((s) => s.clearAudioState)
   const playingTabs = Object.entries(audioStates).filter(([_, s]) => s.isPlaying)
@@ -213,22 +231,46 @@ const BottomSidebar: React.FC = () => {
       />
       <div className="fixed bottom-0 left-0 right-0 h-12 bg-[#18171c] shadow-[0_-4px_8px_-2px_#0a9abb] flex items-center justify-between px-2 z-50">
         <div className="flex items-center space-x-2">
-          <AvatarList
-            accounts={accounts}
-            activeAccountId={activeAccountId}
-            setActiveAccount={setActiveAccount}
-            avatarToDelete={avatarToDelete}
-            setAvatarToDelete={setAvatarToDelete}
-            deleteAccount={deleteAccount}
-          />
-          <Button variant="ghost" size="icon" className="rounded-[8px]" onClick={goBack}>
-            <ArrowLeft className="h-5 w-5" />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="flex items-center space-x-2">
+                <div className="inline-flex items-center justify-center rounded-[8px] bg-blue-500 text-white h-8 w-8 text-sm font-semibold">
+                  {accounts.length}
+                </div>
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent sideOffset={4}>
+              <DropdownMenuLabel>Switch Account</DropdownMenuLabel>
+              {accounts.map((acc, idx) => (
+                <DropdownMenuItem key={acc.id} onSelect={() => setActiveAccount(acc.id)}>
+                  {idx + 1}. {acc.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="rounded-[8px] hover:bg-accent/50"
+            onClick={goBack}
+          >
+            <ArrowLeft className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="rounded-[8px]" onClick={goForward}>
-            <ArrowRight className="h-5 w-5" />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="rounded-[8px] hover:bg-accent/50"
+            onClick={goForward}
+          >
+            <ArrowRight className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="rounded-[8px]" onClick={reload}>
-            <RotateCw className="h-5 w-5" />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="rounded-[8px] hover:bg-accent/50"
+            onClick={reload}
+          >
+            <RotateCw className="h-4 w-4" />
           </Button>
           <div className="relative">
             <Input
@@ -236,34 +278,32 @@ const BottomSidebar: React.FC = () => {
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch(searchQuery)}
               placeholder="Search in tab..."
-              className="w-36"
+              className="h-8 w-full max-w-[20rem] focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 rounded-[8px]"
             />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute right-1 top-1/2 -translate-y-1/2"
+            <div
+              className="absolute right-3 top-1/2 -translate-y-1/2"
               onClick={() => handleSearch(searchQuery)}
             >
               <Search className="h-4 w-4" />
-            </Button>
+            </div>
           </div>
         </div>
         <div className="flex space-x-2">
           <Button
             variant="ghost"
-            size="icon"
-            className="rounded-[8px]"
+            size="sm"
+            className="rounded-[8px] hover:bg-accent/50"
             onClick={() => setShowAccountManager(true)}
           >
-            <User className="h-5 w-5" />
+            <User className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
-            size="icon"
-            className="rounded-[8px]"
+            size="sm"
+            className="rounded-[8px] hover:bg-accent/50"
             onClick={() => setShowMainMenu(true)}
           >
-            <MoreHorizontal className="h-5 w-5" />
+            <MoreHorizontal className="h-4 w-4" />
           </Button>
           <AudioPanel
             playingTabs={playingTabs}
