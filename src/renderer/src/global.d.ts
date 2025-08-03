@@ -35,7 +35,13 @@ declare global {
         translate: () => Promise<void>
       }
       auth: {
-        loginGoogle: (accountId: string) => Promise<string>
+        /** Returns idToken and profile (name, picture, email) */
+        loginGoogle: (
+          accountId: string
+        ) => Promise<{
+          idToken: string
+          profile: { name: string; picture: string; email?: string }
+        }>
       }
       show: {
         main: () => Promise<void>

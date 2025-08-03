@@ -32,21 +32,24 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   const addTab = useAccountStore((state) => state.addTab)
   const setActiveTab = useAccountStore((state) => state.setActiveTab)
   const setToken = useAccountStore((state) => state.setToken)
+  const renameAccount = useAccountStore((state) => state.renameAccount)
   // current signed-in account
   const activeAccount = accounts.find((acc) => acc.id === activeAccountId)
-  // display email if OAuth token set, else display account name or Sign In
-  const displayLabel = activeAccount?.token
-    ? activeAccount.token
-    : activeAccount
-      ? activeAccount.name
-      : 'Sign In'
+  // display account name or Sign In
+  const displayLabel = activeAccount?.name ?? 'Sign In'
+  console.log('MainMenu debug — activeAccount:', activeAccount, 'displayLabel:', displayLabel)
 
   const handleSignIn = async () => {
     if (!activeAccountId) return
     try {
-      const token = await window.api.auth.loginGoogle(activeAccountId)
-      if (typeof token === 'string') {
-        setToken(activeAccountId, token)
+      // loginGoogle now returns { idToken, profile }
+      const result = (await window.api.auth.loginGoogle(activeAccountId)) as any
+      const idToken = typeof result === 'string' ? result : result.idToken
+      // if profile present, update stored name
+      // First set token, then update stored name to avoid overwrite
+      setToken(activeAccountId, idToken)
+      if (typeof result === 'object' && result.profile?.name) {
+        renameAccount(activeAccountId, result.profile.name)
       }
     } catch (error) {
       console.error('Login failed:', error)
@@ -80,7 +83,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               className="px-2 py-1"
               onClick={!activeAccount ? handleSignIn : undefined}
             >
-              {activeAccount ? activeAccount.name : 'Sign In'}
+              {displayLabel}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
 

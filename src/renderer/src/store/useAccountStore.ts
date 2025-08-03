@@ -1,3 +1,4 @@
+import { decodeJwt } from '../shared/lib/jwt'
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 
@@ -38,6 +39,8 @@ interface AccountState {
   renameAccount: (id: string, name: string) => void
   /** Set OAuth token for an account */
   setToken: (id: string, token: string) => void
+  /** Update account profile fields (name and picture) */
+  setProfile: (id: string, profile: { name?: string; picture?: string }) => void
 }
 
 const useAccountStore = create<AccountState>()(
@@ -119,12 +122,34 @@ const useAccountStore = create<AccountState>()(
         set((state) => ({
           accounts: state.accounts.map((acc) => (acc.id === id ? { ...acc, name } : acc))
         })),
+      /** Update stored name and avatarUrl from Google profile */
+      setProfile: (id: string, profile: { name?: string; picture?: string }) =>
+        set((state) => ({
+          accounts: state.accounts.map((acc) => {
+            if (acc.id !== id) return acc
+            return {
+              ...acc,
+              name: profile.name ?? acc.name,
+              avatarUrl: profile.picture ?? acc.avatarUrl
+            }
+          })
+        })),
       /**
-       * Set OAuth token for an account
+       * Set OAuth token for an account and decode profile info
        */
       setToken: (id: string, token: string) =>
         set((state) => ({
-          accounts: state.accounts.map((acc) => (acc.id === id ? { ...acc, token } : acc))
+          accounts: state.accounts.map((acc) => {
+            if (acc.id !== id) return acc
+            let name = acc.name
+            let avatarUrl = acc.avatarUrl
+            try {
+              const decoded = decodeJwt<{ name?: string; picture?: string }>(token)
+              if (decoded?.name) name = decoded.name
+              if (decoded?.picture) avatarUrl = decoded.picture
+            } catch {}
+            return { ...acc, token, name, avatarUrl }
+          })
         }))
     }),
     {
