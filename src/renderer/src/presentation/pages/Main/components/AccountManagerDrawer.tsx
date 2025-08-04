@@ -14,15 +14,8 @@ interface AccountManagerDrawerProps {
 }
 
 const AccountManagerDrawer: React.FC<AccountManagerDrawerProps> = ({ open, onOpenChange }) => {
-  const {
-    accounts,
-    activeAccountId,
-    setActiveAccount,
-    deleteAccount,
-    addAccount,
-    setToken,
-    setProfile
-  } = useAccountStore()
+  const { accounts, activeAccountId, setActiveAccount, deleteAccount, addAccount } =
+    useAccountStore()
   const [guestName, setGuestName] = useState('')
 
   const handleCloseDrawer = () => {
@@ -39,15 +32,12 @@ const AccountManagerDrawer: React.FC<AccountManagerDrawerProps> = ({ open, onOpe
 
   const handleGoogleSignIn = async () => {
     const id = crypto.randomUUID()
-    addAccount({ id, name: 'Temporary Name' })
     try {
-      const { idToken, profile } = await window.api.auth.loginGoogle(id)
-      setToken(id, idToken)
-      setProfile(id, profile)
+      const { profile } = await window.api.auth.loginGoogle(id)
+      addAccount({ id, name: profile.name, email: profile.email ?? '' })
       setActiveAccount(id)
     } catch (err) {
       console.error('Google login failed:', err)
-      deleteAccount(id)
     } finally {
       window.api.show.main()
     }

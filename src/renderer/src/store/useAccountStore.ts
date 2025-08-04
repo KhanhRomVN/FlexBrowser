@@ -11,10 +11,7 @@ export interface Tab {
 export interface Account {
   id: string
   name: string
-  avatarUrl?: string
-  token?: string
   email?: string
-  customName?: string
   tabs: Tab[]
   activeTabId: string | null
   guest: boolean
@@ -37,8 +34,6 @@ interface AccountState {
   deleteTab: (accountId: string, tabId: string) => void
   reorderTabs: (accountId: string, newTabs: Tab[]) => void
   updateTab: (accountId: string, tabId: string, updates: Partial<Tab>) => void
-  setToken: (id: string, token: string) => void
-  setProfile: (id: string, profile: { name: string; picture: string; email?: string }) => void
 }
 
 const useAccountStore = create<AccountState>()(
@@ -120,25 +115,6 @@ const useAccountStore = create<AccountState>()(
               ? {
                   ...acc,
                   tabs: acc.tabs.map((t) => (t.id === tabId ? { ...t, ...updates } : t))
-                }
-              : acc
-          )
-        })),
-
-      setToken: (id, token) =>
-        set((state) => ({
-          accounts: state.accounts.map((acc) => (acc.id === id ? { ...acc, token } : acc))
-        })),
-
-      setProfile: (id, profile) =>
-        set((state) => ({
-          accounts: state.accounts.map((acc) =>
-            acc.id === id
-              ? {
-                  ...acc,
-                  name: profile.name,
-                  avatarUrl: profile.picture,
-                  email: profile.email
                 }
               : acc
           )

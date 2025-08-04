@@ -18,6 +18,8 @@ interface AddAccountDialogProps {
   setName: (name: string) => void
   guest: boolean
   setGuest: (g: boolean) => void
+  email: string
+  setEmail: (email: string) => void
   confirmAdd: () => void
 }
 
@@ -28,6 +30,8 @@ const AddAccountDialog: React.FC<AddAccountDialogProps> = ({
   setName,
   guest,
   setGuest,
+  email,
+  setEmail,
   confirmAdd
 }) => (
   <Dialog open={open} onOpenChange={onOpenChange}>
@@ -51,6 +55,14 @@ const AddAccountDialog: React.FC<AddAccountDialogProps> = ({
           />
           <span>Guest Session</span>
         </label>
+        {!guest && (
+          <Input
+            placeholder="Email"
+            value={email}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+            className="rounded-[8px]"
+          />
+        )}
       </div>
       <DialogFooter>
         <Button

@@ -18,6 +18,7 @@ import {
 import { Input } from '../../../components/ui/input'
 import { Button } from '../../../components/ui/button'
 import { useGlobalAudioStore } from '../../../store/useGlobalAudioStore'
+import { Checkbox } from '../../../components/ui/checkbox'
 
 const MainPage: React.FC = () => {
   const {
@@ -38,6 +39,8 @@ const MainPage: React.FC = () => {
 
   const [showInit, setShowInit] = useState(accounts.length === 0)
   const [initName, setInitName] = useState('')
+  const [initGuest, setInitGuest] = useState(false)
+  const [initEmail, setInitEmail] = useState('')
 
   useEffect(() => {
     if (accounts.length === 0) {
@@ -49,17 +52,18 @@ const MainPage: React.FC = () => {
     const name = initName.trim()
     if (!name) return
 
-    const accountId = crypto.randomUUID()
+    const accountId = window.crypto.randomUUID()
     addAccount({
       id: accountId,
       name,
-      avatarUrl: `https://images.unsplash.com/seed/${accountId}/100x100`,
-      token: ''
+      email: initGuest ? undefined : initEmail.trim(),
+      guest: initGuest,
+      lastUsed: new Date().toISOString()
     })
     setActiveAccount(accountId)
 
     // create initial bookmarks tab
-    const newTabId = `${accountId}-${crypto.randomUUID()}`
+    const newTabId = `${accountId}-${window.crypto.randomUUID()}`
     addTab(accountId, {
       id: newTabId,
       title: 'Bookmarks',
@@ -72,7 +76,7 @@ const MainPage: React.FC = () => {
 
   const handleNewTab = () => {
     if (!activeAccountId) return
-    const newTabId = `${activeAccountId}-${crypto.randomUUID()}`
+    const newTabId = `${activeAccountId}-${window.crypto.randomUUID()}`
     addTab(activeAccountId, {
       id: newTabId,
       title: 'Bookmarks',
@@ -110,11 +114,24 @@ const MainPage: React.FC = () => {
             <DialogTitle>Welcome</DialogTitle>
             <DialogDescription>Enter your account name to get started.</DialogDescription>
           </DialogHeader>
-          <Input
-            placeholder="My Account"
-            value={initName}
-            onChange={(e) => setInitName(e.target.value)}
-          />
+          <div className="space-y-3">
+            <Input
+              placeholder="Name"
+              value={initName}
+              onChange={(e) => setInitName(e.target.value)}
+            />
+            <label className="flex items-center space-x-2">
+              <Checkbox checked={initGuest} onCheckedChange={(val: boolean) => setInitGuest(val)} />
+              <span>Guest Session</span>
+            </label>
+            {!initGuest && (
+              <Input
+                placeholder="Email"
+                value={initEmail}
+                onChange={(e) => setInitEmail(e.target.value)}
+              />
+            )}
+          </div>
           <DialogFooter>
             <Button onClick={confirmInitial}>Confirm</Button>
           </DialogFooter>

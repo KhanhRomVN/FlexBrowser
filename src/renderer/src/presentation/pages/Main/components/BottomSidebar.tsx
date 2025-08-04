@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import crypto from 'crypto'
 import useAccountStore from '../../../../store/useAccountStore'
 import { useGlobalAudioStore } from '../../../../store/useGlobalAudioStore'
 import { User, MoreHorizontal, ArrowLeft, ArrowRight, RotateCw, Search } from 'lucide-react'
@@ -63,6 +64,7 @@ const BottomSidebar: React.FC = () => {
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [name, setName] = useState('')
   const [guest, setGuest] = useState(false)
+  const [email, setEmail] = useState('')
   const [showAccountManager, setShowAccountManager] = useState(false)
   const [showMainMenu, setShowMainMenu] = useState(false)
   const [, setShowDownloads] = useState(false)
@@ -73,15 +75,14 @@ const BottomSidebar: React.FC = () => {
 
   const confirmAdd = () => {
     if (!name.trim()) return
+    if (!guest && !email.trim()) return
     const id = crypto.randomUUID()
     addAccount({
       id,
       name: name.trim(),
-      avatarUrl: `https://images.unsplash.com/seed/${id}/100x100`,
-      token: '',
+      email: guest ? undefined : email.trim(),
       guest,
-      lastUsed: new Date().toISOString(),
-      customName: ''
+      lastUsed: new Date().toISOString()
     })
     setActiveAccount(id)
     const tabId = `${id}-tab`
@@ -95,6 +96,7 @@ const BottomSidebar: React.FC = () => {
     setActiveTab(id, tabId)
     setShowAddDialog(false)
     setName('')
+    setEmail('')
     setGuest(false)
   }
 
@@ -264,6 +266,8 @@ const BottomSidebar: React.FC = () => {
         onOpenChange={setShowAddDialog}
         name={name}
         setName={setName}
+        email={email}
+        setEmail={setEmail}
         guest={guest}
         setGuest={setGuest}
         confirmAdd={confirmAdd}
