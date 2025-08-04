@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import crypto from 'crypto'
+import AddAccountDialog from './BottomSidebar/AddAccountDialog'
 import Drawer from 'react-modern-drawer'
 import 'react-modern-drawer/dist/index.css'
 import { Avatar, AvatarFallback } from '../../../../components/ui/avatar'
@@ -14,40 +14,57 @@ interface AccountManagerDrawerProps {
 }
 
 const AccountManagerDrawer: React.FC<AccountManagerDrawerProps> = ({ open, onOpenChange }) => {
-  const { accounts, activeAccountId, setActiveAccount, deleteAccount, addAccount } =
-    useAccountStore()
-  const [guestName, setGuestName] = useState('')
+  const {
+    accounts,
+    activeAccountId,
+    setActiveAccount,
+    deleteAccount,
+    addAccount,
+    addTab,
+    setActiveTab
+  } = useAccountStore()
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [dlgName, setDlgName] = useState('')
+  const [dlgGuest, setDlgGuest] = useState(false)
+  const [dlgEmail, setDlgEmail] = useState('')
+
+  // central confirm handler to avoid stale closures
+  const handleConfirmAdd = () => {
+    if (!dlgName.trim()) return
+    const id = window.crypto.randomUUID()
+    addAccount({
+      id,
+      name: dlgName.trim(),
+      email: dlgGuest ? undefined : dlgEmail.trim(),
+      guest: dlgGuest
+    })
+    setActiveAccount(id)
+    // add initial blank tab so account isn't auto-deleted
+    const tabId = `${id}-tab`
+    addTab(id, {
+      id: tabId,
+      title: 'New Tab',
+      url: 'about:blank',
+      icon: ''
+    })
+    setActiveTab(id, tabId)
+    setDlgName('')
+    setDlgEmail('')
+    setDlgGuest(false)
+    setDialogOpen(false)
+  }
 
   const handleCloseDrawer = () => {
     onOpenChange(false)
   }
 
-  const handleAddGuest = () => {
-    if (!guestName.trim()) return
-    const id = crypto.randomUUID()
-    addAccount({ id, name: guestName.trim(), guest: true })
-    setActiveAccount(id)
-    setGuestName('')
-  }
-
-  const handleGoogleSignIn = async () => {
-    const id = crypto.randomUUID()
-    try {
-      const { profile } = await window.api.auth.loginGoogle(id)
-      addAccount({ id, name: profile.name, email: profile.email ?? '' })
-      setActiveAccount(id)
-    } catch (err) {
-      console.error('Google login failed:', err)
-    } finally {
-      window.api.show.main()
-    }
-  }
+  // individual guest add removed; use AddAccountDialog for all new accounts
 
   return (
     <Drawer
       open={open}
       direction="right"
-      size={300}
+      size={350}
       onClose={handleCloseDrawer}
       className="!bg-background"
     >
@@ -97,21 +114,26 @@ const AccountManagerDrawer: React.FC<AccountManagerDrawerProps> = ({ open, onOpe
           )}
         </div>
         <div className="p-4 border-t flex flex-col space-y-3">
-          <div className="flex space-x-2">
-            <Input
-              placeholder="Guest name"
-              value={guestName}
-              onChange={(e) => setGuestName(e.target.value)}
-              className="flex-1 rounded-[8px]"
-            />
-            <Button onClick={handleAddGuest} className="rounded-[8px]">
-              Add Guest
-            </Button>
-          </div>
-          <div className="text-center text-xs text-muted-foreground">OR</div>
-          <Button className="w-full mt-2" onClick={handleGoogleSignIn}>
-            Sign in with Google
+          <Button
+            className="w-full mt-2"
+            onClick={() => {
+              onOpenChange(false)
+              setDialogOpen(true)
+            }}
+          >
+            Add Account
           </Button>
+          <AddAccountDialog
+            open={dialogOpen}
+            onOpenChange={setDialogOpen}
+            name={dlgName}
+            setName={setDlgName}
+            guest={dlgGuest}
+            setGuest={setDlgGuest}
+            email={dlgEmail}
+            setEmail={setDlgEmail}
+            confirmAdd={handleConfirmAdd}
+          />
         </div>
       </div>
     </Drawer>
