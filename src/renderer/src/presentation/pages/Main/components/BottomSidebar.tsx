@@ -80,7 +80,8 @@ const BottomSidebar: React.FC = () => {
       avatarUrl: `https://images.unsplash.com/seed/${id}/100x100`,
       token: '',
       guest,
-      lastUsed: new Date().toISOString()
+      lastUsed: new Date().toISOString(),
+      customName: ''
     })
     setActiveAccount(id)
     const tabId = `${id}-tab`

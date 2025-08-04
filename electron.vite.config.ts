@@ -7,7 +7,8 @@ const reactPlugin = require('@vitejs/plugin-react')
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
+    // Exclude node-fetch from the bundle so we use the built-in global fetch
+    plugins: [externalizeDepsPlugin({ include: ['node-fetch'] })],
     build: {
       watch: {}
     }

@@ -1,4 +1,3 @@
-import { decodeJwt } from '../shared/lib/jwt'
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 
@@ -12,8 +11,10 @@ export interface Tab {
 export interface Account {
   id: string
   name: string
-  avatarUrl: string
-  token: string
+  avatarUrl?: string
+  token?: string
+  email?: string
+  customName?: string
   tabs: Tab[]
   activeTabId: string | null
   guest: boolean
@@ -30,17 +31,14 @@ interface AccountState {
     }
   ) => void
   setActiveAccount: (id: string) => void
+  deleteAccount: (id: string) => void
   addTab: (accountId: string, tab: Tab) => void
   setActiveTab: (accountId: string, tabId: string) => void
-  deleteAccount: (id: string) => void
   deleteTab: (accountId: string, tabId: string) => void
   reorderTabs: (accountId: string, newTabs: Tab[]) => void
   updateTab: (accountId: string, tabId: string, updates: Partial<Tab>) => void
-  renameAccount: (id: string, name: string) => void
-  /** Set OAuth token for an account */
   setToken: (id: string, token: string) => void
-  /** Update account profile fields (name and picture) */
-  setProfile: (id: string, profile: { name?: string; picture?: string }) => void
+  setProfile: (id: string, profile: { name: string; picture: string; email?: string }) => void
 }
 
 const useAccountStore = create<AccountState>()(
@@ -48,6 +46,7 @@ const useAccountStore = create<AccountState>()(
     (set) => ({
       accounts: [],
       activeAccountId: null,
+
       addAccount: (account) =>
         set((state) => {
           const newAccount: Account = {
@@ -62,6 +61,7 @@ const useAccountStore = create<AccountState>()(
             activeAccountId: newAccount.id
           }
         }),
+
       setActiveAccount: (id) =>
         set((state) => ({
           accounts: state.accounts.map((acc) =>
@@ -69,29 +69,33 @@ const useAccountStore = create<AccountState>()(
           ),
           activeAccountId: id
         })),
-      addTab: (accountId, tab) =>
-        set((state) => ({
-          accounts: state.accounts.map((acc) =>
-            acc.id === accountId ? { ...acc, tabs: [...acc.tabs, tab] } : acc
-          )
-        })),
-      setActiveTab: (accountId, tabId) =>
-        set((state) => ({
-          accounts: state.accounts.map((acc) =>
-            acc.id === accountId ? { ...acc, activeTabId: tabId } : acc
-          )
-        })),
+
       deleteAccount: (id) =>
         set((state) => {
           const accounts = state.accounts.filter((acc) => acc.id !== id)
           const activeAccountId = state.activeAccountId === id ? null : state.activeAccountId
           return { accounts, activeAccountId }
         }),
+
+      addTab: (accountId, tab) =>
+        set((state) => ({
+          accounts: state.accounts.map((acc) =>
+            acc.id === accountId ? { ...acc, tabs: [...acc.tabs, tab] } : acc
+          )
+        })),
+
+      setActiveTab: (accountId, tabId) =>
+        set((state) => ({
+          accounts: state.accounts.map((acc) =>
+            acc.id === accountId ? { ...acc, activeTabId: tabId } : acc
+          )
+        })),
+
       deleteTab: (accountId, tabId) =>
         set((state) => ({
           accounts: state.accounts.map((acc) => {
             if (acc.id !== accountId) return acc
-            const newTabs = acc.tabs.filter((tab) => tab.id !== tabId)
+            const newTabs = acc.tabs.filter((t) => t.id !== tabId)
             let newActiveTabId = acc.activeTabId
             if (acc.activeTabId === tabId && newTabs.length > 0) {
               newActiveTabId = newTabs[newTabs.length - 1].id
@@ -101,55 +105,43 @@ const useAccountStore = create<AccountState>()(
             return { ...acc, tabs: newTabs, activeTabId: newActiveTabId }
           })
         })),
-      reorderTabs: (accountId: string, newTabs: Tab[]) =>
+
+      reorderTabs: (accountId, newTabs) =>
         set((state) => ({
           accounts: state.accounts.map((acc) =>
             acc.id === accountId ? { ...acc, tabs: newTabs } : acc
           )
         })),
+
       updateTab: (accountId, tabId, updates) =>
         set((state) => ({
           accounts: state.accounts.map((acc) =>
             acc.id === accountId
               ? {
                   ...acc,
-                  tabs: acc.tabs.map((tab) => (tab.id === tabId ? { ...tab, ...updates } : tab))
+                  tabs: acc.tabs.map((t) => (t.id === tabId ? { ...t, ...updates } : t))
                 }
               : acc
           )
         })),
-      renameAccount: (id, name) =>
+
+      setToken: (id, token) =>
         set((state) => ({
-          accounts: state.accounts.map((acc) => (acc.id === id ? { ...acc, name } : acc))
+          accounts: state.accounts.map((acc) => (acc.id === id ? { ...acc, token } : acc))
         })),
-      /** Update stored name and avatarUrl from Google profile */
-      setProfile: (id: string, profile: { name?: string; picture?: string }) =>
+
+      setProfile: (id, profile) =>
         set((state) => ({
-          accounts: state.accounts.map((acc) => {
-            if (acc.id !== id) return acc
-            return {
-              ...acc,
-              name: profile.name ?? acc.name,
-              avatarUrl: profile.picture ?? acc.avatarUrl
-            }
-          })
-        })),
-      /**
-       * Set OAuth token for an account and decode profile info
-       */
-      setToken: (id: string, token: string) =>
-        set((state) => ({
-          accounts: state.accounts.map((acc) => {
-            if (acc.id !== id) return acc
-            let name = acc.name
-            let avatarUrl = acc.avatarUrl
-            try {
-              const decoded = decodeJwt<{ name?: string; picture?: string }>(token)
-              if (decoded?.name) name = decoded.name
-              if (decoded?.picture) avatarUrl = decoded.picture
-            } catch {}
-            return { ...acc, token, name, avatarUrl }
-          })
+          accounts: state.accounts.map((acc) =>
+            acc.id === id
+              ? {
+                  ...acc,
+                  name: profile.name,
+                  avatarUrl: profile.picture,
+                  email: profile.email
+                }
+              : acc
+          )
         }))
     }),
     {

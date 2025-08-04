@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import useAccountStore from '../../../../store/useAccountStore'
 import History from './MainMenu/History'
 import {
   DropdownMenu,
@@ -26,67 +25,22 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onOpenHistory,
   onOpenPasswords
 }) => {
-  // Account sign-in
-  const activeAccountId = useAccountStore((state) => state.activeAccountId)
-  const accounts = useAccountStore((state) => state.accounts)
-  const addTab = useAccountStore((state) => state.addTab)
-  const setActiveTab = useAccountStore((state) => state.setActiveTab)
-  const setToken = useAccountStore((state) => state.setToken)
-  const renameAccount = useAccountStore((state) => state.renameAccount)
-  // current signed-in account
-  const activeAccount = accounts.find((acc) => acc.id === activeAccountId)
-  // display account name or Sign In
-  const displayLabel = activeAccount?.name ?? 'Sign In'
-  console.log('MainMenu debug — activeAccount:', activeAccount, 'displayLabel:', displayLabel)
-
-  const handleSignIn = async () => {
-    if (!activeAccountId) return
-    try {
-      // loginGoogle now returns { idToken, profile }
-      const result = (await window.api.auth.loginGoogle(activeAccountId)) as any
-      const idToken = typeof result === 'string' ? result : result.idToken
-      // if profile present, update stored name
-      // First set token, then update stored name to avoid overwrite
-      setToken(activeAccountId, idToken)
-      if (typeof result === 'object' && result.profile?.name) {
-        renameAccount(activeAccountId, result.profile.name)
-      }
-    } catch (error) {
-      console.error('Login failed:', error)
-    } finally {
-      onOpenChange(false)
-    }
-  }
-
   const [view, setView] = useState<'main' | 'history'>('main')
 
   return (
     <DropdownMenu
       open={open}
       onOpenChange={(val) => {
-        // keep open when switching to history view
         if (view === 'history' && !val) return
         onOpenChange(val)
       }}
     >
-      {/* Invisible trigger, controlled externally */}
       <DropdownMenuTrigger asChild>
         <div />
       </DropdownMenuTrigger>
       <DropdownMenuContent side="top" align="end" className="w-64 p-1 bg-background">
         {view === 'main' ? (
           <>
-            <DropdownMenuLabel className="px-2 py-1 font-semibold">
-              Sync and save data
-            </DropdownMenuLabel>
-            <DropdownMenuItem
-              className="px-2 py-1"
-              onClick={!activeAccount ? handleSignIn : undefined}
-            >
-              {displayLabel}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-
             <DropdownMenuLabel className="px-2 py-1 font-semibold">Tab và cửa sổ</DropdownMenuLabel>
             <DropdownMenuItem
               className="px-2 py-1"
@@ -106,7 +60,10 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             <DropdownMenuItem
               className="px-2 py-1"
               onPointerDown={(e) => e.preventDefault()}
-              onClick={() => setView('history')}
+              onClick={() => {
+                setView('history')
+                onOpenHistory?.()
+              }}
             >
               History
             </DropdownMenuItem>
@@ -128,10 +85,6 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               }}
             >
               Passwords
-            </DropdownMenuItem>
-            <DropdownMenuItem className="px-2 py-1">
-              Extensions and themes
-              <DropdownMenuShortcut>Ctrl+Shift+A</DropdownMenuShortcut>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
 

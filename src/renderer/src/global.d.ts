@@ -18,6 +18,7 @@ declare global {
 
   interface Window {
     api: {
+      ipc: any
       history: any
       app: {
         quit: () => Promise<void>
@@ -36,9 +37,7 @@ declare global {
       }
       auth: {
         /** Returns idToken and profile (name, picture, email) */
-        loginGoogle: (
-          accountId: string
-        ) => Promise<{
+        loginGoogle: (accountId: string) => Promise<{
           idToken: string
           profile: { name: string; picture: string; email?: string }
         }>

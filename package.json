@@ -74,7 +74,7 @@
     "idb": "^8.0.3",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.294.0",
-    "node-fetch": "^3.3.2",
+    "node-fetch": "^2.7.0",
     "postcss": "^8.4.32",
     "react-beautiful-dnd": "^13.1.1",
     "react-calendar": "^5.1.0",

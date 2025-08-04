@@ -1,16 +1,11 @@
-import React from 'react'
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetFooter
-} from '../../../../components/ui/sheet'
-import { Avatar, AvatarImage, AvatarFallback } from '../../../../components/ui/avatar'
+import React, { useState } from 'react'
+import crypto from 'crypto'
+import Drawer from 'react-modern-drawer'
+import 'react-modern-drawer/dist/index.css'
+import { Avatar, AvatarFallback } from '../../../../components/ui/avatar'
 import { Button } from '../../../../components/ui/button'
 import { Input } from '../../../../components/ui/input'
-import { Checkbox } from '../../../../components/ui/checkbox'
-import { Trash2, ArrowRight } from 'lucide-react'
+import { ArrowRight, X, Trash2 } from 'lucide-react'
 import useAccountStore from '../../../../store/useAccountStore'
 
 interface AccountManagerDrawerProps {
@@ -25,125 +20,111 @@ const AccountManagerDrawer: React.FC<AccountManagerDrawerProps> = ({ open, onOpe
     setActiveAccount,
     deleteAccount,
     addAccount,
-    addTab,
-    setActiveTab
+    setToken,
+    setProfile
   } = useAccountStore()
-  // count synced vs guest and activePresence (has tabs)
-  const realCount = accounts.filter((acc) => !acc.guest).length
-  const guestCount = accounts.filter((acc) => acc.guest).length
-  const activeCount = accounts.filter((acc) => acc.tabs.length > 0).length
+  const [guestName, setGuestName] = useState('')
 
-  const [name, setName] = React.useState('')
-  const [guest, setGuest] = React.useState(false)
-  const url = 'https://www.google.com'
+  const handleCloseDrawer = () => {
+    onOpenChange(false)
+  }
 
-  const confirmAdd = () => {
-    if (!name.trim()) return
+  const handleAddGuest = () => {
+    if (!guestName.trim()) return
     const id = crypto.randomUUID()
-    addAccount({
-      id,
-      name: name.trim(),
-      avatarUrl: `https://images.unsplash.com/seed/${id}/100x100`,
-      token: '',
-      guest,
-      lastUsed: new Date().toISOString()
-    })
+    addAccount({ id, name: guestName.trim(), guest: true })
     setActiveAccount(id)
-    const tabId = `${id}-tab`
-    const hostname = new URL(url).hostname
-    addTab(id, {
-      id: tabId,
-      title: hostname,
-      url,
-      icon: `https://www.google.com/s2/favicons?domain=${hostname}`
-    })
-    setActiveTab(id, tabId)
-    setName('')
-    setGuest(false)
+    setGuestName('')
+  }
+
+  const handleGoogleSignIn = async () => {
+    const id = crypto.randomUUID()
+    addAccount({ id, name: 'Temporary Name' })
+    try {
+      const { idToken, profile } = await window.api.auth.loginGoogle(id)
+      setToken(id, idToken)
+      setProfile(id, profile)
+      setActiveAccount(id)
+    } catch (err) {
+      console.error('Google login failed:', err)
+      deleteAccount(id)
+    } finally {
+      window.api.show.main()
+    }
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="p-0 w-[400px]">
-        <div className="flex flex-col h-full bg-background text-foreground">
-          <SheetHeader className="flex flex-col items-start p-4 border-b space-y-1">
-            <SheetTitle>Accounts Manager</SheetTitle>
-          </SheetHeader>
-          <div className="flex-1 overflow-auto p-4 space-y-4">
-            {accounts.map((acc, idx) => (
+    <Drawer
+      open={open}
+      direction="right"
+      size={300}
+      onClose={handleCloseDrawer}
+      className="!bg-background"
+    >
+      <div className="flex flex-col h-full">
+        <div className="p-4 border-b flex items-center">
+          <h2 className="text-lg font-semibold">Account Manager</h2>
+          <Button variant="ghost" size="icon" className="ml-auto" onClick={handleCloseDrawer}>
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+        <div className="flex-1 overflow-auto p-4 space-y-4">
+          {accounts.length === 0 ? (
+            <div className="text-center text-sm text-muted-foreground">No accounts available.</div>
+          ) : (
+            accounts.map((acc) => (
               <div
                 key={acc.id}
-                className="flex items-center justify-between p-3 bg-popover rounded-md"
+                className="flex items-center justify-between p-2 bg-popover rounded-md"
               >
                 <div className="flex items-center space-x-3">
-                  <span className="text-sm text-muted-foreground">{idx + 1}.</span>
                   <Avatar className="w-8 h-8 rounded-[8px]">
-                    <AvatarImage src={acc.avatarUrl} alt={acc.name} />
                     <AvatarFallback>{acc.name.charAt(0)}</AvatarFallback>
                   </Avatar>
-                  <div>
-                    <div className="text-sm">{acc.name}</div>
-                    <div
-                      className={`text-xs ${
-                        acc.guest
-                          ? 'text-muted-foreground'
-                          : acc.token
-                            ? 'text-success'
-                            : 'text-warning'
-                      }`}
-                    >
-                      {acc.guest ? 'Guest Session' : acc.token ? 'Synced' : 'Not Synced'}{' '}
-                      {acc.tabs.length > 0 ? '• Active' : '• Inactive'}
+                  <div className="text-sm">
+                    <div className="font-medium">{acc.name}</div>
+                    <div className="text-xs">
+                      <span>{new Date(acc.lastUsed).toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  {activeAccountId !== acc.id && (
-                    <>
-                      <Button variant="ghost" size="icon" onClick={() => setActiveAccount(acc.id)}>
-                        <ArrowRight className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => deleteAccount(acc.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </>
+                  {activeAccountId === acc.id ? (
+                    <Button variant="ghost" size="icon" onClick={() => setActiveAccount('')}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <Button variant="ghost" size="icon" onClick={() => setActiveAccount(acc.id)}>
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
                   )}
+                  <Button variant="ghost" size="icon" onClick={() => deleteAccount(acc.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
-            ))}
-
-            {accounts.length === 0 && (
-              <div className="text-center text-sm text-muted-foreground">
-                No accounts yet. Add one below.
-              </div>
-            )}
-          </div>
-
-          <SheetFooter className="p-4 border-t flex flex-col space-y-3">
-            <Input
-              placeholder="Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-[8px]"
-            />
-            <label className="flex items-center space-x-2">
-              <Checkbox
-                checked={guest}
-                onCheckedChange={(val) => setGuest(!!val)}
-                className="rounded-[8px]"
-              />
-              <span className="text-sm">Guest Session</span>
-            </label>
-            <Button
-              onClick={confirmAdd}
-              className="w-full rounded-[8px] hover:bg-primary hover:text-primary-foreground transition-colors"
-            >
-              Add Account
-            </Button>
-          </SheetFooter>
+            ))
+          )}
         </div>
-      </SheetContent>
-    </Sheet>
+        <div className="p-4 border-t flex flex-col space-y-3">
+          <div className="flex space-x-2">
+            <Input
+              placeholder="Guest name"
+              value={guestName}
+              onChange={(e) => setGuestName(e.target.value)}
+              className="flex-1 rounded-[8px]"
+            />
+            <Button onClick={handleAddGuest} className="rounded-[8px]">
+              Add Guest
+            </Button>
+          </div>
+          <div className="text-center text-xs text-muted-foreground">OR</div>
+          <Button className="w-full mt-2" onClick={handleGoogleSignIn}>
+            Sign in with Google
+          </Button>
+        </div>
+      </div>
+    </Drawer>
   )
 }
 
