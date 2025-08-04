@@ -86,7 +86,7 @@ const AccountManagerDrawer: React.FC<AccountManagerDrawerProps> = ({ open, onOpe
               >
                 <div className="flex items-center space-x-3">
                   <Avatar className="w-8 h-8 rounded-[8px]">
-                    <AvatarFallback>{acc.name.charAt(0)}</AvatarFallback>
+                    <AvatarFallback>{acc.name ? acc.name.charAt(0) : ''}</AvatarFallback>
                   </Avatar>
                   <div className="text-sm">
                     <div className="font-medium">{acc.name}</div>

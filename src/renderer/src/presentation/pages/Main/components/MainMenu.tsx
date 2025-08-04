@@ -9,6 +9,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuShortcut
 } from '../../../../components/ui/dropdown-menu'
+import useAccountStore, { Account } from '../../../../store/useAccountStore'
+import { LogOut } from 'lucide-react'
 
 interface MainMenuProps {
   open: boolean
@@ -26,6 +28,42 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onOpenPasswords
 }) => {
   const [view, setView] = useState<'main' | 'history'>('main')
+  const { activeAccountId, accounts, updateAccount } = useAccountStore()
+  const activeAccount: Account | null = activeAccountId
+    ? (accounts.find((acc) => acc.id === activeAccountId) ?? null)
+    : null
+
+  const handleSignIn = async () => {
+    if (!activeAccountId) return
+    try {
+      const { idToken, profile } = await window.api.auth.loginGoogle(activeAccountId)
+      updateAccount(activeAccountId, {
+        isSignedIn: true,
+        idToken,
+        picture: profile.picture,
+        name: profile.name,
+        email: profile.email
+      })
+      onOpenChange(false)
+    } catch (error) {
+      console.error('Login failed:', error)
+    }
+  }
+
+  const handleLogout = async () => {
+    if (!activeAccountId) return
+    try {
+      await window.api.auth.logoutGoogle(activeAccountId)
+      updateAccount(activeAccountId, {
+        isSignedIn: false,
+        idToken: undefined,
+        picture: undefined
+      })
+      onOpenChange(false)
+    } catch (error) {
+      console.error('Logout failed:', error)
+    }
+  }
 
   return (
     <DropdownMenu
@@ -39,6 +77,29 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         <div />
       </DropdownMenuTrigger>
       <DropdownMenuContent side="top" align="end" className="w-64 p-1 bg-background">
+        <DropdownMenuLabel className="px-2 py-1 font-semibold">Account</DropdownMenuLabel>
+        {activeAccount && !activeAccount.isSignedIn && (
+          <DropdownMenuItem className="px-2 py-1" onClick={handleSignIn}>
+            Sign In with Google
+          </DropdownMenuItem>
+        )}
+        {activeAccount?.isSignedIn && (
+          <>
+            <DropdownMenuItem className="px-2 py-1 flex items-center">
+              <img
+                src={activeAccount.picture as string}
+                alt={activeAccount.name}
+                className="w-6 h-6 rounded-full mr-2"
+              />
+              <span>{activeAccount.name}</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem className="px-2 py-1 flex items-center" onClick={handleLogout}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </DropdownMenuItem>
+          </>
+        )}
+        <DropdownMenuSeparator />
         {view === 'main' ? (
           <>
             <DropdownMenuLabel className="px-2 py-1 font-semibold">Tab và cửa sổ</DropdownMenuLabel>

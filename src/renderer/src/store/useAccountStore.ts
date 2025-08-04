@@ -16,6 +16,9 @@ export interface Account {
   activeTabId: string | null
   guest: boolean
   lastUsed: string
+  isSignedIn?: boolean
+  idToken?: string
+  picture?: string
 }
 
 interface AccountState {
@@ -27,13 +30,14 @@ interface AccountState {
       lastUsed?: string
     }
   ) => void
-  setActiveAccount: (id: string) => void
+  setActiveAccount: (id: string | null) => void
   deleteAccount: (id: string) => void
   addTab: (accountId: string, tab: Tab) => void
   setActiveTab: (accountId: string, tabId: string) => void
   deleteTab: (accountId: string, tabId: string) => void
   reorderTabs: (accountId: string, newTabs: Tab[]) => void
   updateTab: (accountId: string, tabId: string, updates: Partial<Tab>) => void
+  updateAccount: (id: string, updates: Partial<Account>) => void
 }
 
 const useAccountStore = create<AccountState>()(
@@ -57,7 +61,7 @@ const useAccountStore = create<AccountState>()(
           }
         }),
 
-      setActiveAccount: (id) =>
+      setActiveAccount: (id: string | null) =>
         set((state) => ({
           accounts: state.accounts.map((acc) =>
             acc.id === id ? { ...acc, lastUsed: new Date().toISOString() } : acc
@@ -118,6 +122,11 @@ const useAccountStore = create<AccountState>()(
                 }
               : acc
           )
+        })),
+
+      updateAccount: (id, updates) =>
+        set((state) => ({
+          accounts: state.accounts.map((acc) => (acc.id === id ? { ...acc, ...updates } : acc))
         }))
     }),
     {

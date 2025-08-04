@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import crypto from 'crypto'
 import useAccountStore from '../../../../store/useAccountStore'
 import { useGlobalAudioStore } from '../../../../store/useGlobalAudioStore'
-import { User, MoreHorizontal, ArrowLeft, ArrowRight, RotateCw, Search } from 'lucide-react'
+import { User, MoreHorizontal, ArrowLeft, ArrowRight, RotateCw, Search, X } from 'lucide-react'
 import { Button } from '../../../../components/ui/button'
 import AccountManagerDrawer from './AccountManagerDrawer'
 import SettingDrawer from './SettingDrawer'
@@ -28,6 +28,7 @@ const BottomSidebar: React.FC = () => {
     addTab,
     setActiveTab
   } = useAccountStore()
+  const activeAccount = accounts.find((acc) => acc.id === activeAccountId) || null
 
   // auto-remove accounts that have no tabs and reassign active account
   useEffect(() => {
@@ -74,6 +75,8 @@ const BottomSidebar: React.FC = () => {
   const url = 'https://www.google.com'
 
   const confirmAdd = () => {
+    // prevent adding more than 9 accounts
+    if (accounts.length >= 9) return
     if (!name.trim()) return
     if (!guest && !email.trim()) return
     const id = crypto.randomUUID()
@@ -250,6 +253,8 @@ const BottomSidebar: React.FC = () => {
     setSearchQuery(trimmed)
   }
 
+  // display 1-based index for active account badge
+  const activeIndex = accounts.findIndex((acc) => acc.id === activeAccountId)
   return (
     <>
       <MainMenu
@@ -278,16 +283,33 @@ const BottomSidebar: React.FC = () => {
             <DropdownMenuTrigger asChild>
               <div className="flex items-center space-x-2">
                 <div className="inline-flex items-center justify-center rounded-[8px] bg-blue-500 text-white h-8 w-8 text-sm font-semibold">
-                  {accounts.length}
+                  {activeIndex >= 0 ? activeIndex + 1 : '-'}
                 </div>
               </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent sideOffset={4}>
               <DropdownMenuLabel>Switch Account</DropdownMenuLabel>
               {accounts.map((acc, idx) => (
-                <DropdownMenuItem key={acc.id} onSelect={() => setActiveAccount(acc.id)}>
-                  {idx + 1}. {acc.name}
-                </DropdownMenuItem>
+                <div
+                  key={acc.id}
+                  className={`flex items-center justify-between px-2 py-1 ${
+                    activeAccountId === acc.id ? 'bg-accent/20' : ''
+                  }`}
+                >
+                  <DropdownMenuItem className="flex-1" onSelect={() => setActiveAccount(acc.id)}>
+                    {idx + 1}. {acc.name}
+                  </DropdownMenuItem>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e: React.MouseEvent) => {
+                      e.stopPropagation()
+                      deleteAccount(acc.id)
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>

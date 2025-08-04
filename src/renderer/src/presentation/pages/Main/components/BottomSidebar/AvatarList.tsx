@@ -41,7 +41,7 @@ const AvatarList: React.FC<AvatarListProps> = ({
           }`}
           style={{ backgroundImage: `url(${acc.avatarUrl})` }}
         >
-          <span className="text-white font-bold z-10">{acc.name.charAt(0)}</span>
+          <span className="text-white font-bold z-10">{acc.name ? acc.name.charAt(0) : ''}</span>
         </div>
         {avatarToDelete === acc.id && (
           <Button

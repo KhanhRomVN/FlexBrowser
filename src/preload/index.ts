@@ -37,7 +37,8 @@ const api = {
     loginGoogle: (accountId: string) => {
       console.log('[PRELOAD] Initiating Google login')
       return ipcRenderer.invoke('login-google', accountId)
-    }
+    },
+    logoutGoogle: (accountId: string) => ipcRenderer.invoke('logout-google', accountId)
   },
   moveWindow: (x: number, y: number) => ipcRenderer.send('move-pip-window', x, y),
   hide: {

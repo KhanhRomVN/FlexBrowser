@@ -41,6 +41,7 @@ declare global {
           idToken: string
           profile: { name: string; picture: string; email?: string }
         }>
+        logoutGoogle: (accountId: string) => Promise<boolean>
       }
       show: {
         main: () => Promise<void>

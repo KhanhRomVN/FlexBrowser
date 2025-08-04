@@ -25,6 +25,7 @@ const MainPage: React.FC = () => {
     accounts,
     activeAccountId,
     addAccount,
+    updateAccount,
     addTab,
     setActiveAccount,
     setActiveTab,
@@ -72,6 +73,24 @@ const MainPage: React.FC = () => {
     })
     setActiveTab(accountId, newTabId)
     setShowInit(false)
+
+    // Auto sign-in for non-guest users
+    if (!initGuest) {
+      setTimeout(() => {
+        window.api.auth
+          .loginGoogle(accountId)
+          .then(({ idToken, profile }) => {
+            updateAccount(accountId, {
+              isSignedIn: true,
+              idToken,
+              picture: profile.picture,
+              name: profile.name,
+              email: profile.email
+            })
+          })
+          .catch(console.error)
+      }, 1000)
+    }
   }
 
   const handleNewTab = () => {

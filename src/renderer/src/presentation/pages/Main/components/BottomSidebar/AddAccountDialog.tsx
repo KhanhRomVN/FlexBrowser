@@ -10,6 +10,7 @@ import {
 import { Input } from '../../../../../components/ui/input'
 import { Checkbox } from '../../../../../components/ui/checkbox'
 import { Button } from '../../../../../components/ui/button'
+import useAccountStore from '../../../../../store/useAccountStore'
 
 interface AddAccountDialogProps {
   open: boolean
@@ -33,47 +34,57 @@ const AddAccountDialog: React.FC<AddAccountDialogProps> = ({
   email,
   setEmail,
   confirmAdd
-}) => (
-  <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>Add New Account</DialogTitle>
-        <DialogDescription>Enter account details below</DialogDescription>
-      </DialogHeader>
-      <div className="space-y-4">
-        <Input
-          placeholder="Name"
-          value={name}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
-          className="rounded-[8px]"
-        />
-        <label className="flex items-center space-x-2">
-          <Checkbox
-            checked={guest}
-            onCheckedChange={(val: boolean) => setGuest(val)}
-            className="rounded-[8px]"
-          />
-          <span>Guest Session</span>
-        </label>
-        {!guest && (
+}) => {
+  const accounts = useAccountStore((s) => s.accounts)
+  const maxReached = accounts.length >= 9
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add New Account</DialogTitle>
+          <DialogDescription>Enter account details below</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
           <Input
-            placeholder="Email"
-            value={email}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+            placeholder="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
             className="rounded-[8px]"
           />
-        )}
-      </div>
-      <DialogFooter>
-        <Button
-          onClick={confirmAdd}
-          className="rounded-[8px] w-full hover:bg-primary hover:text-primary-foreground transition-colors"
-        >
-          Add Account
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
-)
+          <label className="flex items-center space-x-2">
+            <Checkbox
+              checked={guest}
+              onCheckedChange={(val) => setGuest(Boolean(val))}
+              className="rounded-[8px]"
+            />
+            <span>Guest Session</span>
+          </label>
+          {!guest && (
+            <Input
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="rounded-[8px]"
+            />
+          )}
+        </div>
+        <DialogFooter>
+          <Button
+            onClick={confirmAdd}
+            disabled={maxReached}
+            className={`rounded-[8px] w-full transition-colors ${
+              maxReached
+                ? 'opacity-50 cursor-not-allowed'
+                : 'hover:bg-primary hover:text-primary-foreground'
+            }`}
+          >
+            {maxReached ? 'Limit Reached (9)' : 'Add Account'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
 
 export default AddAccountDialog
