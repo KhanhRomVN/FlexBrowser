@@ -56,6 +56,12 @@ declare global {
         /** Open DevTools for the active WebView */
         openWebview(): void
       }
+      storage: {
+        getItem(key: string): Promise<string | null>
+        setItem(key: string, value: string): Promise<unknown>
+        removeItem(key: string): Promise<unknown>
+      }
+      getPath(name: string): string
       getCwd(): string
     }
   }

@@ -41,6 +41,24 @@ const MainPage: React.FC = () => {
   const [initGuest, setInitGuest] = useState(false)
   const [initEmail, setInitEmail] = useState('')
 
+  // Migrate legacy localStorage to file-based storage on first load
+  useEffect(() => {
+    const migrateStorage = async () => {
+      try {
+        const existing = await window.api.storage.getItem('account_store')
+        if (!existing) {
+          const legacy = localStorage.getItem('account_store')
+          if (legacy) {
+            await window.api.storage.setItem('account_store', legacy)
+            localStorage.removeItem('account_store')
+          }
+        }
+      } catch (e) {
+        console.error('[MainPage] Storage migration failed', e)
+      }
+    }
+    migrateStorage()
+  }, [])
   useEffect(() => {
     if (accounts.length === 0) {
       setShowInit(true)

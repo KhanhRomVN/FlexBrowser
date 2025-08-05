@@ -40,9 +40,10 @@ app.on('open-url', (event, url) => {
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.electron')
   app.setLoginItemSettings({ openAtLogin: true })
+  // Register IPC handlers before creating windows
+  registerIpcHandlers()
   createMainWindow()
   registerShortcuts(getMainWindow)
-  registerIpcHandlers()
 
   app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window))
 

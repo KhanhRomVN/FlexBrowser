@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, shell } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import { Buffer } from 'buffer'
 
@@ -83,6 +83,12 @@ const api = {
     syncGoogle: (idToken: string) => ipcRenderer.invoke('sync-google-session', idToken),
     clearGoogle: () => ipcRenderer.invoke('clear-google-session')
   },
+  storage: {
+    getItem: (key: string) => ipcRenderer.invoke('storage:get', key),
+    setItem: (key: string, value: string) => ipcRenderer.invoke('storage:set', key, value),
+    removeItem: (key: string) => ipcRenderer.invoke('storage:remove', key)
+  },
+  getPath: (name: string) => ipcRenderer.sendSync('get-path', name),
   moveWindow: (x: number, y: number) => ipcRenderer.send('move-pip-window', x, y),
   hide: {
     main: () => ipcRenderer.invoke('hide-main-window')

@@ -18,6 +18,12 @@ declare global {
 
   interface Window {
     api: {
+      storage: {
+        getItem(key: string): Promise<string | null>
+        setItem(key: string, value: string): Promise<unknown>
+        removeItem(key: string): Promise<unknown>
+      }
+      getPath(name: string): string
       session: any
       ipc: any
       history: any

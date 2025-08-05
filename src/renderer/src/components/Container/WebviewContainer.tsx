@@ -127,13 +127,6 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
   if (isElectron && !mediaMode) {
     return (
       <div className="h-full relative overflow-hidden">
-        {/* DevTools button for embedded Webview */}
-        <button
-          onClick={() => webviewRef.current?.openDevTools()}
-          className="absolute top-2 right-2 z-50 p-1 bg-gray-800 text-white rounded"
-        >
-          DevTools
-        </button>
         {accounts.length > 0 ? (
           accounts.map((acc) =>
             acc.tabs.map((tab) => (

@@ -1,6 +1,12 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 
+const createCustomStorage = () => ({
+  getItem: (name: string) => (window.api as any).storage.getItem(name),
+  setItem: (name: string, value: string) => (window.api as any).storage.setItem(name, value),
+  removeItem: (name: string) => (window.api as any).storage.removeItem(name)
+})
+
 export interface Tab {
   id: string
   title: string
@@ -131,7 +137,7 @@ const useAccountStore = create<AccountState>()(
     }),
     {
       name: 'account_store',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(createCustomStorage),
       partialize: (state) => ({
         // Keep non-guest accounts and re-sync Google session for signed-in accounts
         accounts: state.accounts.filter((acc) => {

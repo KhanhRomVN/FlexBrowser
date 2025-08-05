@@ -1,5 +1,6 @@
 import { app, ipcMain, BrowserWindow, session } from 'electron'
 import path from 'path'
+import fs from 'fs'
 import { openPipWindow } from './windows/pipWindow'
 import { getMainWindow } from './windows/mainWindow'
 
@@ -59,6 +60,49 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('clear-google-session', async () => {
     const sess = session.defaultSession;
     await sess.cookies.remove('https://google.com', 'SID');
+    return null;
+  });
+
+  // File-based storage handlers
+  ipcMain.handle('storage:get', async (_event, key: string) => {
+    const filePath = path.join(app.getPath('userData'), 'accounts.json');
+    try {
+      if (fs.existsSync(filePath)) {
+        const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        return data[key] ?? null;
+      }
+    } catch (e) {
+      console.error('Failed to read storage', e);
+    }
+    return null;
+  });
+
+  ipcMain.handle('storage:set', async (_event, key: string, value: any) => {
+    const filePath = path.join(app.getPath('userData'), 'accounts.json');
+    try {
+      let data: Record<string, any> = {};
+      if (fs.existsSync(filePath)) {
+        data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      }
+      data[key] = value;
+      fs.writeFileSync(filePath, JSON.stringify(data));
+    } catch (e) {
+      console.error('Failed to write storage', e);
+    }
+    return null;
+  });
+
+  ipcMain.handle('storage:remove', async (_event, key: string) => {
+    const filePath = path.join(app.getPath('userData'), 'accounts.json');
+    try {
+      if (fs.existsSync(filePath)) {
+        const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        delete data[key];
+        fs.writeFileSync(filePath, JSON.stringify(data));
+      }
+    } catch (e) {
+      console.error('Failed to remove from storage', e);
+    }
     return null;
   });
   // Open DevTools for main window from renderer
