@@ -8,6 +8,7 @@ import {
 } from './config/env'
 import crypto from 'crypto'
 import http from 'http'
+import { deletePassword } from 'keytar'
 // Removed node-fetch import; using global fetch available in Node.js >=18
 import { openPipWindow } from './windows/pipWindow'
 import { getMainWindow } from './windows/mainWindow'
@@ -26,6 +27,7 @@ export function registerIpcHandlers(): void {
       idToken: string
       profile: { name: string; picture: string; email?: string }
     }> => {
+      console.log('[FlexBrowser] login-google invoked for accountId:', accountId)
       // PKCE setup
       const { code_verifier, code_challenge } = (() => {
         const base64URLEncode = (buf: Buffer) =>
@@ -130,6 +132,12 @@ export function registerIpcHandlers(): void {
       })
     }
   )
+
+  // Logout handler: delete stored refresh token
+  ipcMain.handle('logout-google', async (_event, accountId: string) => {
+    await deletePassword('FlexBrowser', accountId)
+    return true
+  })
 
   ipcMain.on('ping', () => console.log('pong'))
 

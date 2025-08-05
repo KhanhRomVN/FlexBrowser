@@ -36,13 +36,22 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   const handleSignIn = async () => {
     if (!activeAccountId) return
     try {
-      const { idToken, profile } = await window.api.auth.loginGoogle(activeAccountId)
+      const { idToken } = await window.api.auth.loginGoogle(activeAccountId)
+      const payload = JSON.parse(atob(idToken.split('.')[1]))
+      const { name, picture, email } = payload as { name: string; picture: string; email?: string }
       updateAccount(activeAccountId, {
         isSignedIn: true,
         idToken,
-        picture: profile.picture,
-        name: profile.name,
-        email: profile.email
+        picture,
+        name,
+        email
+      })
+      console.log('[FlexBrowser|MainMenu] Updated account state for', activeAccountId, {
+        isSignedIn: true,
+        idToken,
+        picture,
+        name,
+        email
       })
       onOpenChange(false)
     } catch (error) {

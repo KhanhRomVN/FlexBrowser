@@ -1,5 +1,3 @@
-// src/renderer/src/presentation/pages/Main/index.tsx
-
 import React, { useEffect, useState } from 'react'
 import '../../../styles.css'
 import useAccountStore from '../../../store/useAccountStore'

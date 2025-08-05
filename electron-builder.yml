@@ -1,5 +1,10 @@
 appId: com.electron.app
 productName: flex_browser
+
+protocols:
+  - name: flexbrowser
+    schemes:
+      - flexbrowser
 directories:
   buildResources: build
 files:

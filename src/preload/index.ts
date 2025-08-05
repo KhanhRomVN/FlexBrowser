@@ -1,7 +1,10 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, shell } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import { Buffer } from 'buffer'
 
 // Custom APIs for renderer
+const OAUTH_BASE_URL = process.env.ENV === 'DEV' ? 'http://localhost:5173' : 'https://flex-oauth.vercel.app';
+
 const api = {
   app: {
     quit: () => ipcRenderer.invoke('app-quit')
@@ -35,8 +38,35 @@ const api = {
   auth: {
     /** Initiate Google sign-in for accountId, returns OAuth token */
     loginGoogle: (accountId: string) => {
-      console.log('[PRELOAD] Initiating Google login')
-      return ipcRenderer.invoke('login-google', accountId)
+      const oauthUrl = `${OAUTH_BASE_URL}/sign-in?accountId=${accountId}`
+      console.log('[PRELOAD] Opening OAuth URL', oauthUrl)
+      shell.openExternal(oauthUrl)
+      console.log('[FlexBrowser] Hiding main window')
+      ipcRenderer.invoke('hide-main-window')
+      return new Promise<{ idToken: string; profile: { name: string; email?: string; picture?: string } }>((resolve) => {
+        ipcRenderer.once('oauth-token', (_event, token: string) => {
+          console.log('[PRELOAD] Received OAuth token from main:', token)
+          // Decode JWT payload to extract user profile
+          const profileData: { name: string; email?: string; picture?: string } = {
+            name: '',
+            email: undefined,
+            picture: undefined
+          }
+          try {
+            const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString())
+            profileData.name = payload.name || ''
+            profileData.email = payload.email
+            profileData.picture = payload.picture
+          } catch (error) {
+            console.error('[PRELOAD] Failed to parse token payload', error)
+          }
+          resolve({ idToken: token, profile: profileData })
+        })
+      })
+    },
+    /** Listen for OAuth token from main process */
+    onOauthToken: (callback: (token: string) => void) => {
+      ipcRenderer.on('oauth-token', (_event, token: string) => callback(token))
     },
     logoutGoogle: (accountId: string) => ipcRenderer.invoke('logout-google', accountId)
   },
