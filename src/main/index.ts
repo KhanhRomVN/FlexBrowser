@@ -1,4 +1,3 @@
-import './config/env'
 import { app } from 'electron'
 import { createMainWindow, getMainWindow } from './windows/mainWindow'
 
