@@ -21,12 +21,6 @@ class ApiService {
     // Add request interceptor for debugging
     this.client.interceptors.request.use(
       (config) => {
-        console.log('[API Request]', {
-          url: config.url,
-          method: config.method,
-          headers: config.headers,
-          data: config.data instanceof FormData ? '[FormData Contents]' : config.data
-        })
         return config
       },
       (error) => {
@@ -38,11 +32,6 @@ class ApiService {
     // Add response interceptor for debugging
     this.client.interceptors.response.use(
       (response) => {
-        console.log('[API Response]', {
-          url: response.config.url,
-          status: response.status,
-          data: response.data
-        })
         return response
       },
       (error) => {
@@ -157,23 +146,6 @@ class ApiService {
   ): Promise<T> {
     try {
       const headers = await this.getHeaders(requiresAuth, isFormData)
-
-      // Debug log for FormData
-      if (isFormData && data instanceof FormData) {
-        console.log('[FormData Contents]')
-        for (const [key, value] of data.entries()) {
-          if (value instanceof File) {
-            console.log(`${key}:`, {
-              name: value.name,
-              type: value.type,
-              size: value.size
-            })
-          } else {
-            console.log(`${key}:`, value)
-          }
-        }
-      }
-
       const config = {
         headers,
         // For FormData, let the browser handle everything
@@ -211,19 +183,6 @@ class ApiService {
         config.maxContentLength = Infinity
         // Quan trọng: KHÔNG tự set Content-Type, để browser tự set boundary
         config.headers['Content-Type'] = undefined
-        // Log FormData để debug
-        console.log('[FormData Contents]')
-        for (const [key, value] of data.entries()) {
-          if (value instanceof File) {
-            console.log(`${key}:`, {
-              name: value.name,
-              type: value.type,
-              size: value.size
-            })
-          } else {
-            console.log(`${key}:`, value)
-          }
-        }
       }
       const response: AxiosResponse<T> = await this.client.put(endpoint, data, config)
       return response.data

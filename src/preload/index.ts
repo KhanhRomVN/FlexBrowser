@@ -39,13 +39,10 @@ const api = {
     /** Initiate Google sign-in for accountId, returns OAuth token */
     loginGoogle: (accountId: string) => {
       const oauthUrl = `${OAUTH_BASE_URL}/sign-in?accountId=${accountId}`
-      console.log('[PRELOAD] Opening OAuth URL', oauthUrl)
       shell.openExternal(oauthUrl)
-      console.log('[FlexBrowser] Hiding main window')
       ipcRenderer.invoke('hide-main-window')
       return new Promise<{ idToken: string; profile: { name: string; email?: string; picture?: string } }>((resolve) => {
         ipcRenderer.once('oauth-token', (_event, token: string) => {
-          console.log('[PRELOAD] Received OAuth token from main:', token)
           // Decode JWT payload to extract user profile
           const profileData: { name: string; email?: string; picture?: string } = {
             name: '',

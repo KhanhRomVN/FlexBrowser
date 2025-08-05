@@ -46,13 +46,6 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         name,
         email
       })
-      console.log('[FlexBrowser|MainMenu] Updated account state for', activeAccountId, {
-        isSignedIn: true,
-        idToken,
-        picture,
-        name,
-        email
-      })
       onOpenChange(false)
     } catch (error) {
       console.error('Login failed:', error)

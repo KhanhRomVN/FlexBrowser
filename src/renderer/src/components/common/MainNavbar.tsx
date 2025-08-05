@@ -16,7 +16,6 @@ export default function MainNavbar() {
 
   const handleLogout = () => {
     // Replace with real logout logic.
-    console.log('Logging out...')
     // window.location.reload()
   }
 

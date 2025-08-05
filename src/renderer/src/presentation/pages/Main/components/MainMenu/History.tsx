@@ -5,7 +5,6 @@ import { Button } from '../../../../../components/ui/button'
 import {
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuLabel,
   DropdownMenuShortcut
 } from '../../../../../components/ui/dropdown-menu'
 
@@ -27,23 +26,18 @@ const History: React.FC = () => {
 
   // Fetch history only when signed in with a real synced account
   useEffect(() => {
-    console.log('History useEffect activeAccount.token:', activeAccount?.token)
-    if (activeAccount?.token) {
-      console.log('Fetching history from API...')
+    if (activeAccount?.idToken) {
       window.api.history
         .list()
         .then((items: HistoryItem[]) => {
-          console.log('Fetched history items:', items)
           setHistoryItems(items)
         })
         .catch((err: any) => {
           console.error('Failed to load history:', err)
           setHistoryItems([])
         })
-    } else {
-      console.log('No activeAccount.token, skipping history fetch.')
     }
-  }, [activeAccount?.token])
+  }, [activeAccount?.idToken])
 
   const clearHistory = async () => {
     try {
@@ -59,7 +53,7 @@ const History: React.FC = () => {
     return item.title?.toLowerCase().includes(term) || item.url.toLowerCase().includes(term)
   })
 
-  if (!activeAccount?.token) {
+  if (!activeAccount?.idToken) {
     return (
       <div className="px-2 py-1 text-sm text-muted-foreground">
         Please sign in to a real Google account to view history.

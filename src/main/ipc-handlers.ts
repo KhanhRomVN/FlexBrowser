@@ -1,8 +1,4 @@
 import { app, ipcMain, BrowserWindow } from 'electron'
-import crypto from 'crypto'
-import http from 'http'
-import { deletePassword } from 'keytar'
-// Removed node-fetch import; using global fetch available in Node.js >=18
 import { openPipWindow } from './windows/pipWindow'
 import { getMainWindow } from './windows/mainWindow'
 
@@ -12,7 +8,7 @@ import { getMainWindow } from './windows/mainWindow'
 export function registerIpcHandlers(): void {
 
 
-  ipcMain.on('ping', () => console.log('pong'))
+  ipcMain.on('ping', () => { })
 
   ipcMain.handle('open-pip-window', async (_event, url: string, currentTime?: number) => {
     await openPipWindow(url, currentTime)

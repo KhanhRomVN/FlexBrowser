@@ -7,12 +7,10 @@ import { electronApp, optimizer } from '@electron-toolkit/utils'
 
 function handleProtocolURL(protocolUrl: string) {
   try {
-    console.log('[FlexBrowser] Received protocol URL', protocolUrl)
     const urlObj = new URL(protocolUrl)
     const token = urlObj.searchParams.get('token')
     const win = getMainWindow()
     if (token && win) {
-      console.log('[FlexBrowser] Showing main window with OAuth token')
       win.show()
       win.webContents.send('oauth-token', token)
     }
