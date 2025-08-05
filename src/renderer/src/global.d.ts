@@ -18,6 +18,7 @@ declare global {
 
   interface Window {
     api: {
+      session: any
       ipc: any
       history: any
       app: {
@@ -36,12 +37,21 @@ declare global {
         translate: () => Promise<void>
       }
       auth: {
+        baseUrl: any
         /** Returns idToken and profile (name, picture, email) */
         loginGoogle: (accountId: string) => Promise<{
           idToken: string
           profile: { name: string; picture: string; email?: string }
         }>
+        /** Listen for OAuth token from embedded auth window */
+        onOauthToken: (callback: (token: string) => void) => void
         logoutGoogle: (accountId: string) => Promise<boolean>
+      }
+      /** DevTools control exposed by preload */
+      devtools: {
+        openWebview(): unknown
+        /** Open DevTools for the main window */
+        open: () => void
       }
       show: {
         main: () => Promise<void>
@@ -58,7 +68,7 @@ declare global {
   }
 }
 
-export {}
+export { }
 
 // DnD Kit modules (no bundled types)
 declare module '@dnd-kit/core'

@@ -133,7 +133,14 @@ const useAccountStore = create<AccountState>()(
       name: 'account_store',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        accounts: state.accounts.filter((acc) => !acc.guest),
+        // Keep non-guest accounts and re-sync Google session for signed-in accounts
+        accounts: state.accounts.filter((acc) => {
+          if (acc.isSignedIn && acc.idToken) {
+            // Sync Google session cookie when restoring signed-in accounts
+            window.api.session.syncGoogle(acc.idToken)
+          }
+          return !acc.guest
+        }),
         activeAccountId: state.activeAccountId
       })
     }

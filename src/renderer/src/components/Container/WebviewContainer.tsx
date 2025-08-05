@@ -100,6 +100,18 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
     // also catch in-page/SPAs navigation so we update stored URL
     el.addEventListener('did-navigate-in-page', handleNavigate as any)
     const audioInterval = setInterval(handleAudioState, 1000)
+    // DevTools toggle on F12
+    const handleF12 = (e: KeyboardEvent) => {
+      if (e.key === 'F12') {
+        el.openDevTools()
+      }
+    }
+    window.addEventListener('keydown', handleF12)
+    // Listen for DevTools menu click to open webview DevTools
+    const handleOpenWebviewDevtools = () => {
+      webviewRef.current?.openDevTools()
+    }
+    window.addEventListener('open-webview-devtools', handleOpenWebviewDevtools)
 
     return () => {
       el.removeEventListener('dom-ready', handleDomReady)
@@ -107,23 +119,32 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
       el.removeEventListener('did-navigate', handleNavigate as any)
       el.removeEventListener('did-navigate-in-page', handleNavigate as any)
       clearInterval(audioInterval)
+      window.removeEventListener('keydown', handleF12)
+      window.removeEventListener('open-webview-devtools', handleOpenWebviewDevtools)
     }
   }, [activeAccountId, activeTabId, isElectron, updateTab, tabId, setAudioState])
 
   if (isElectron && !mediaMode) {
     return (
       <div className="h-full relative overflow-hidden">
+        {/* DevTools button for embedded Webview */}
+        <button
+          onClick={() => webviewRef.current?.openDevTools()}
+          className="absolute top-2 right-2 z-50 p-1 bg-gray-800 text-white rounded"
+        >
+          DevTools
+        </button>
         {accounts.length > 0 ? (
           accounts.map((acc) =>
             acc.tabs.map((tab) => (
               <webview
                 id={`webview-${tab.id}`}
                 key={`${acc.id}-${tab.id}`}
-                partition={acc.guest ? `session:${acc.id}` : `persist:${acc.id}`}
+                partition="persist:default"
                 src={tab.url}
                 allowpopups
                 ref={acc.id === activeAccountId && tab.id === activeTabId ? webviewRef : undefined}
-                className={`absolute top-0 left-0 right-0 bottom-0 ${
+                className={`absolute top-0 left-0 right-0 bottom-0 z-0 ${
                   acc.id === activeAccountId && tab.id === activeTabId ? '' : 'hidden'
                 }`}
               />
@@ -132,11 +153,11 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
         ) : (
           <webview
             id={`webview-${tabId}`}
-            partition={`session:${tabId}`}
+            partition="persist:default"
             ref={webviewRef}
             src={url}
             allowpopups
-            className="absolute top-0 left-0 right-0 bottom-0"
+            className="absolute top-0 left-0 right-0 bottom-0 z-0"
           />
         )}
       </div>

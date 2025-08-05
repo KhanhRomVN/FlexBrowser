@@ -39,7 +39,8 @@ const api = {
     /** Initiate Google sign-in for accountId, returns OAuth token */
     loginGoogle: (accountId: string) => {
       const oauthUrl = `${OAUTH_BASE_URL}/sign-in?accountId=${accountId}`
-      shell.openExternal(oauthUrl)
+      // Open embedded OAuth window instead of external browser
+      ipcRenderer.invoke('open-auth-window', oauthUrl)
       ipcRenderer.invoke('hide-main-window')
       return new Promise<{ idToken: string; profile: { name: string; email?: string; picture?: string } }>((resolve) => {
         ipcRenderer.once('oauth-token', (_event, token: string) => {
@@ -65,7 +66,22 @@ const api = {
     onOauthToken: (callback: (token: string) => void) => {
       ipcRenderer.on('oauth-token', (_event, token: string) => callback(token))
     },
-    logoutGoogle: (accountId: string) => ipcRenderer.invoke('logout-google', accountId)
+    logoutGoogle: (_accountId: string) => ipcRenderer.invoke('clear-google-session'),
+    /** Base URL for embedded OAuth */
+    baseUrl: OAUTH_BASE_URL
+  },
+  /** DevTools control */
+  devtools: {
+    /** Open DevTools for the main window */
+    open: () => { ipcRenderer.send('devtools-open') },
+    /** Emit event to open DevTools for the WebView */
+    openWebview: () => {
+      window.dispatchEvent(new CustomEvent('open-webview-devtools'))
+    }
+  },
+  session: {
+    syncGoogle: (idToken: string) => ipcRenderer.invoke('sync-google-session', idToken),
+    clearGoogle: () => ipcRenderer.invoke('clear-google-session')
   },
   moveWindow: (x: number, y: number) => ipcRenderer.send('move-pip-window', x, y),
   hide: {

@@ -4,8 +4,43 @@ declare global {
   interface Window {
     electron: ElectronAPI
     api: {
+      app: {
+        quit(): Promise<unknown>
+      }
+      zoom: {
+        setLevel(level: number): Promise<unknown>
+      }
+      tab: {
+        newTab(): Promise<unknown>
+      }
+      page: {
+        print(): Promise<unknown>
+        save(): Promise<unknown>
+        find(): Promise<unknown>
+        translate(): Promise<unknown>
+      }
       pip: {
         open(url: string, currentTime?: number): Promise<unknown>
+      }
+      getVideoInfoForPip(): { src: string; currentTime: number } | null
+      auth: {
+        /** Initiate Google sign-in for accountId, returns OAuth token and profile */
+        loginGoogle(accountId: string): Promise<{
+          idToken: string
+          profile: { name: string; email?: string; picture?: string }
+        }>
+        /** Listen for OAuth token from main process */
+        onOauthToken(callback: (token: string) => void): void
+        /** Logout Google session for accountId */
+        logoutGoogle(accountId: string): Promise<unknown>
+        /** Base URL for embedded OAuth */
+        baseUrl: string
+      }
+      session: {
+        /** Sync Google session cookie */
+        syncGoogle(idToken: string): Promise<unknown>
+        /** Clear Google session cookie */
+        clearGoogle(): Promise<unknown>
       }
       moveWindow(x: number, y: number): void
       hide: {
@@ -14,7 +49,16 @@ declare global {
       show: {
         main(): Promise<unknown>
       }
+      /** DevTools controls */
+      devtools: {
+        /** Open DevTools for the main window */
+        open(): void
+        /** Open DevTools for the active WebView */
+        openWebview(): void
+      }
       getCwd(): string
     }
   }
 }
+
+export { }

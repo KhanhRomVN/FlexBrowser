@@ -4,7 +4,6 @@ import Drawer from 'react-modern-drawer'
 import 'react-modern-drawer/dist/index.css'
 import { Avatar, AvatarFallback } from '../../../../components/ui/avatar'
 import { Button } from '../../../../components/ui/button'
-import { Input } from '../../../../components/ui/input'
 import { ArrowRight, X, Trash2 } from 'lucide-react'
 import useAccountStore from '../../../../store/useAccountStore'
 

@@ -47,6 +47,43 @@ const MainPage: React.FC = () => {
     }
   }, [accounts.length])
 
+  // Listen for OAuth token from embedded auth window
+  useEffect(() => {
+    window.api.auth.onOauthToken(async (token: string) => {
+      if (!activeAccountId) return
+      try {
+        // Decode JWT payload for profile
+        const payload = JSON.parse(atob(token.split('.')[1]))
+        const { name, picture, email } = payload as {
+          name: string
+          picture: string
+          email?: string
+        }
+        // Update account store and sync session cookie
+        updateAccount(activeAccountId, {
+          isSignedIn: true,
+          idToken: token,
+          name,
+          picture,
+          email
+        })
+        await window.api.session.syncGoogle(token)
+      } catch (e) {
+        console.error('[MainPage] Failed to handle OAuth token', e)
+      }
+    })
+  }, [activeAccountId, updateAccount])
+
+  // Sync Google session on active account change (fallback)
+  useEffect(() => {
+    if (
+      activeAccountId &&
+      accounts.some((acc) => acc.id === activeAccountId && acc.isSignedIn && acc.idToken)
+    ) {
+      const account = accounts.find((acc) => acc.id === activeAccountId)!
+      window.api.session.syncGoogle(account.idToken!)
+    }
+  }, [activeAccountId, accounts])
   const confirmInitial = () => {
     const name = initName.trim()
     if (!name) return

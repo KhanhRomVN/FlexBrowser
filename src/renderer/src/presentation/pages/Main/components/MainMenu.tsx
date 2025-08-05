@@ -28,34 +28,30 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onOpenPasswords
 }) => {
   const [view, setView] = useState<'main' | 'history'>('main')
-  const { activeAccountId, accounts, updateAccount } = useAccountStore()
+  const { activeAccountId, accounts, updateAccount, addTab, setActiveTab } = useAccountStore()
   const activeAccount: Account | null = activeAccountId
     ? (accounts.find((acc) => acc.id === activeAccountId) ?? null)
     : null
 
-  const handleSignIn = async () => {
+  const handleSignIn = () => {
     if (!activeAccountId) return
-    try {
-      const { idToken } = await window.api.auth.loginGoogle(activeAccountId)
-      const payload = JSON.parse(atob(idToken.split('.')[1]))
-      const { name, picture, email } = payload as { name: string; picture: string; email?: string }
-      updateAccount(activeAccountId, {
-        isSignedIn: true,
-        idToken,
-        picture,
-        name,
-        email
-      })
-      onOpenChange(false)
-    } catch (error) {
-      console.error('Login failed:', error)
-    }
+    // Open embedded OAuth in a new in-app tab
+    const oauthUrl = `${window.api.auth.baseUrl}/sign-in?accountId=${activeAccountId}`
+    const newTabId = `${activeAccountId}-${window.crypto.randomUUID()}`
+    addTab(activeAccountId, {
+      id: newTabId,
+      title: 'Google Sign-In',
+      url: oauthUrl,
+      icon: ''
+    })
+    setActiveTab(activeAccountId, newTabId)
+    onOpenChange(false)
   }
 
   const handleLogout = async () => {
     if (!activeAccountId) return
     try {
-      await window.api.auth.logoutGoogle(activeAccountId)
+      await window.api.session.clearGoogle()
       updateAccount(activeAccountId, {
         isSignedIn: false,
         idToken: undefined,
@@ -200,6 +196,17 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             </DropdownMenuLabel>
             <DropdownMenuItem className="px-2 py-1">Settings</DropdownMenuItem>
             <DropdownMenuItem className="px-2 py-1">More tools</DropdownMenuItem>
+            {/* DevTools for debugging */}
+            <DropdownMenuItem
+              className="px-2 py-1"
+              onClick={() => {
+                console.log('[Renderer] DevTools menu click')
+                window.api.devtools.openWebview()
+                onOpenChange(false)
+              }}
+            >
+              DevTools
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
 
             <DropdownMenuLabel className="px-2 py-1 font-semibold">
