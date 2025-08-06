@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import History from './MainMenu/History'
-import Code from './Code'
+import Code from './MainMenu/Code'
 import {
   DropdownMenu,
   DropdownMenuTrigger,

@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { X, Settings, History as HistoryIcon, Plus, User } from 'lucide-react'
-import { Button } from '../../../../components/ui/button'
-import { Input } from '../../../../components/ui/input'
+import { Button } from '../../../../../components/ui/button'
+import { Input } from '../../../../../components/ui/input'
 import {
   Select,
   SelectTrigger,
   SelectContent,
   SelectItem,
   SelectValue
-} from '../../../../components/ui/select'
-import useAccountStore, { AI_MODELS, detectAIModel } from '../../../../store/useAccountStore'
+} from '../../../../../components/ui/select'
+import useAccountStore, { AI_MODELS, detectAIModel } from '../../../../../store/useAccountStore'
 
 interface CodeProps {
   onClose?: () => void

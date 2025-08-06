@@ -5,7 +5,7 @@ import type { Tab } from '../../../store/useAccountStore'
 import TabBar from './components/TabBar'
 import WebviewContainer from '../../../components/Container/WebviewContainer'
 import BottomSidebar from './components/BottomSidebar'
-import Code from './components/Code'
+import Code from './components/MainMenu/Code'
 import {
   Dialog,
   DialogContent,
