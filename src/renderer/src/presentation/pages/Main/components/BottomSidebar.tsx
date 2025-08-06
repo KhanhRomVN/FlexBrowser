@@ -18,7 +18,11 @@ import { MainMenu } from './MainMenu'
 import AudioPanel from './BottomSidebar/AudioPanel'
 import { Input } from '../../../../components/ui/input'
 
-const BottomSidebar: React.FC = () => {
+interface BottomSidebarProps {
+  onOpenCode?: () => void
+}
+
+const BottomSidebar: React.FC<BottomSidebarProps> = ({ onOpenCode }) => {
   const {
     accounts,
     activeAccountId,
@@ -261,6 +265,7 @@ const BottomSidebar: React.FC = () => {
         open={showMainMenu}
         onOpenChange={setShowMainMenu}
         onOpenDownloads={() => setShowDownloads(true)}
+        onOpenCode={onOpenCode}
         onOpenHistory={() => setShowHistory(true)}
         onOpenPasswords={() => setShowPasswords(true)}
       />

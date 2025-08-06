@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import History from './MainMenu/History'
+import Code from './Code'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -18,6 +19,7 @@ interface MainMenuProps {
   onOpenDownloads?: () => void
   onOpenHistory?: () => void
   onOpenPasswords?: () => void
+  onOpenCode?: () => void
 }
 
 export const MainMenu: React.FC<MainMenuProps> = ({
@@ -25,9 +27,10 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onOpenChange,
   onOpenDownloads,
   onOpenHistory,
-  onOpenPasswords
+  onOpenPasswords,
+  onOpenCode
 }) => {
-  const [view, setView] = useState<'main' | 'history'>('main')
+  const [view, setView] = useState<'main' | 'history' | 'code'>('main')
   const { activeAccountId, accounts, updateAccount, addTab, setActiveTab } = useAccountStore()
   const activeAccount: Account | null = activeAccountId
     ? (accounts.find((acc) => acc.id === activeAccountId) ?? null)
@@ -68,13 +71,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   }
 
   return (
-    <DropdownMenu
-      open={open}
-      onOpenChange={(val) => {
-        if (view === 'history' && !val) return
-        onOpenChange(val)
-      }}
-    >
+    <DropdownMenu open={open} onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>
         <div />
       </DropdownMenuTrigger>
@@ -129,6 +126,16 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               }}
             >
               History
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="px-2 py-1"
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={() => {
+                onOpenChange(false)
+                onOpenCode?.()
+              }}
+            >
+              Code
             </DropdownMenuItem>
             <DropdownMenuItem
               className="px-2 py-1"
@@ -231,11 +238,17 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               <DropdownMenuShortcut>Ctrl+Q</DropdownMenuShortcut>
             </DropdownMenuItem>
           </>
-        ) : (
+        ) : view === 'history' ? (
           <>
             <DropdownMenuLabel className="px-2 py-1 font-semibold">History</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <History />
+          </>
+        ) : (
+          <>
+            <DropdownMenuLabel className="px-2 py-1 font-semibold">Code</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <Code onClose={() => setView('main')} />
           </>
         )}
       </DropdownMenuContent>

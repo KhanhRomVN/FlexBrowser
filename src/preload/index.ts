@@ -39,7 +39,8 @@ const api = {
     /** Initiate Google sign-in for accountId, returns OAuth token */
     loginGoogle: (accountId: string) => {
       const oauthUrl = `${OAUTH_BASE_URL}/sign-in?accountId=${accountId}`
-      // Open OAuth URL in external system browser
+      // Hide main window and open OAuth URL in external browser
+      ipcRenderer.invoke('hide-main-window')
       ipcRenderer.invoke('open-external', oauthUrl)
       return new Promise<{ idToken: string; profile: { name: string; email?: string; picture?: string } }>((resolve) => {
         ipcRenderer.once('oauth-token', (_event, token: string) => {

@@ -5,6 +5,7 @@ import type { Tab } from '../../../store/useAccountStore'
 import TabBar from './components/TabBar'
 import WebviewContainer from '../../../components/Container/WebviewContainer'
 import BottomSidebar from './components/BottomSidebar'
+import Code from './components/Code'
 import {
   Dialog,
   DialogContent,
@@ -39,6 +40,7 @@ const MainPage: React.FC = () => {
   const [showInit, setShowInit] = useState(accounts.length === 0)
   const [initName, setInitName] = useState('')
   const [initGuest, setInitGuest] = useState(false)
+  const [showCode, setShowCode] = useState(false)
   const [initEmail, setInitEmail] = useState('')
 
   // Migrate legacy localStorage to file-based storage on first load
@@ -132,24 +134,6 @@ const MainPage: React.FC = () => {
     })
     setActiveTab(accountId, newTabId)
     setShowInit(false)
-
-    // Auto sign-in for non-guest users
-    if (!initGuest) {
-      setTimeout(() => {
-        window.api.auth
-          .loginGoogle(accountId)
-          .then(({ idToken, profile }) => {
-            updateAccount(accountId, {
-              isSignedIn: true,
-              idToken,
-              picture: profile.picture,
-              name: profile.name,
-              email: profile.email
-            })
-          })
-          .catch(console.error)
-      }, 1000)
-    }
   }
 
   const handleNewTab = () => {
@@ -182,6 +166,20 @@ const MainPage: React.FC = () => {
   const tabs = accounts.find((acc) => acc.id === activeAccountId)?.tabs || []
   const activeTabId = accounts.find((acc) => acc.id === activeAccountId)?.activeTabId || ''
   const activeUrl = tabs.find((t) => t.id === activeTabId)?.url || defaultUrl
+
+  // Show full-screen Code panel
+  if (showCode) {
+    return (
+      <div className="fixed inset-0 z-50 bg-background">
+        <div className="absolute inset-0 bottom-12">
+          <Code onClose={() => setShowCode(false)} />
+        </div>
+        <div className="fixed bottom-0 left-0 right-0">
+          <BottomSidebar onOpenCode={() => setShowCode(true)} />
+        </div>
+      </div>
+    )
+  }
 
   // Show account creation dialog if no accounts
   if (showInit) {
@@ -233,7 +231,7 @@ const MainPage: React.FC = () => {
         <WebviewContainer url={activeUrl} isElectron={true} tabId={activeTabId} />
       </div>
 
-      <BottomSidebar />
+      <BottomSidebar onOpenCode={() => setShowCode(true)} />
     </div>
   )
 }
