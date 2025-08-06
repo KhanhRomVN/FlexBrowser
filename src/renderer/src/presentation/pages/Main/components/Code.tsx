@@ -166,7 +166,7 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
           title: `Chat: ${summary}`
         })
       }
-    } catch (err: any) {
+    } catch (err) {
       setError(`Error: ${err.message || 'Something went wrong'}`)
       setMessages((prev) => [
         ...prev,

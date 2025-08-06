@@ -13,12 +13,17 @@ function handleProtocolURL(protocolUrl: string) {
     const win = getMainWindow()
     if (token && win) {
       win.show()
-      win.webContents.send('oauth-token', token, accountId)
+      if (win.webContents && !win.webContents.isDestroyed()) {
+        win.webContents.send('oauth-token', token, accountId)
+      } else {
+        console.warn('[FlexBrowser] Cannot send token, webContents is destroyed')
+      }
     }
   } catch (e) {
     console.error('[FlexBrowser] Invalid protocol URL', e)
   }
 }
+
 
 const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) {

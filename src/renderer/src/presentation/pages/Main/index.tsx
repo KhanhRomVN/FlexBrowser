@@ -202,6 +202,13 @@ const MainPage: React.FC = () => {
     )
   }
 
+  if (showCode) {
+    return (
+      <div className="flex flex-col w-full h-screen">
+        <Code onClose={() => setShowCode(false)} />
+      </div>
+    )
+  }
   return (
     <div className="flex flex-col w-full h-screen">
       <TabBar

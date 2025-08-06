@@ -23,6 +23,7 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
   const setAudioState = useGlobalAudioStore((state) => state.setAudioState)
   const audioIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const isWebviewDestroyedRef = useRef(false)
+  const isInitializedRef = useRef(false)
 
   const safeUpdateTab = useCallback(
     (accountId: string, tabId: string, updates: any) => {
@@ -50,76 +51,94 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
     [setAudioState]
   )
 
+  const isValidUrl = useCallback((url: string): boolean => {
+    if (!url || url.trim() === '') return false
+    try {
+      new URL(url)
+      return true
+    } catch {
+      return url.startsWith('file://') || url.startsWith('data:')
+    }
+  }, [])
+
   useEffect(() => {
     if (!isElectron || !activeAccountId || !activeTabId) return
     const el = webviewRef.current
     if (!el) return
 
-    // Reset destruction flag
+    // Reset refs for new webview instance
     isWebviewDestroyedRef.current = false
+    isInitializedRef.current = false
 
     const handleDomReady = () => {
-      if (isWebviewDestroyedRef.current || !el) return
+      if (!el || isWebviewDestroyedRef.current) return
 
       try {
-        const currentUrl = el.getURL()
-        if (!currentUrl) return
+        // Wait a bit to ensure webview is fully ready
+        setTimeout(() => {
+          if (isWebviewDestroyedRef.current || !el) return
 
-        const hostname = new URL(currentUrl).hostname
-        safeUpdateTab(activeAccountId, activeTabId, {
-          url: currentUrl,
-          icon: `https://www.google.com/s2/favicons?domain=${hostname}`
-        })
+          const currentUrl = el.getURL()
+          if (!currentUrl || !isValidUrl(currentUrl)) return
 
-        const match =
-          /youtube\.com/.test(currentUrl) || /\.(mp4|webm|ogg|mp3|wav)(\?.*)?$/.test(currentUrl)
+          const hostname = new URL(currentUrl).hostname
+          safeUpdateTab(activeAccountId, activeTabId, {
+            url: currentUrl,
+            icon: `https://www.google.com/s2/favicons?domain=${hostname}`
+          })
 
-        if (match) {
-          el.insertCSS(
-            `
-            #electron-pip-button {
-              position: fixed;
-              top: 16px;
-              right: 16px;
-              z-index: 9999;
-              border-radius: 8px;
-              background: rgba(255,255,255,0.8);
-              border: none;
-              padding: 8px;
-              cursor: pointer;
-            }
-          `
-          ).catch(console.warn)
+          const match =
+            /youtube\.com/.test(currentUrl) || /\.(mp4|webm|ogg|mp3|wav)(\?.*)?$/.test(currentUrl)
 
-          el.executeJavaScript(
-            `
-            (function() {
-              if (!document.getElementById('electron-pip-button')) {
-                const btn = document.createElement('button');
-                btn.id = 'electron-pip-button';
-                btn.innerText = '♪';
-                btn.onclick = function() { 
-                  if (window.api && window.api.pip) {
-                    window.api.pip.open(window.location.href); 
-                  }
-                };
-                document.body.appendChild(btn);
+          if (match) {
+            el.insertCSS(
+              `
+              #electron-pip-button {
+                position: fixed;
+                top: 16px;
+                right: 16px;
+                z-index: 9999;
+                border-radius: 8px;
+                background: rgba(255,255,255,0.8);
+                border: none;
+                padding: 8px;
+                cursor: pointer;
               }
-            })();
-          `
-          ).catch(console.warn)
-        }
+            `
+            ).catch(() => {}) // Ignore CSS insertion errors
+
+            el.executeJavaScript(
+              `
+              (function() {
+                if (!document.getElementById('electron-pip-button')) {
+                  const btn = document.createElement('button');
+                  btn.id = 'electron-pip-button';
+                  btn.innerText = '♪';
+                  btn.onclick = function() { 
+                    if (window.api && window.api.pip) {
+                      window.api.pip.open(window.location.href); 
+                    }
+                  };
+                  document.body.appendChild(btn);
+                }
+              })();
+            `
+            ).catch(() => {}) // Ignore JS execution errors
+          }
+
+          isInitializedRef.current = true
+        }, 100)
       } catch (error) {
         console.warn('Error in dom-ready handler:', error)
       }
     }
 
     const handleTitle = (e: Electron.PageTitleUpdatedEvent) => {
-      if (isWebviewDestroyedRef.current || !el) return
+      if (!el || isWebviewDestroyedRef.current || !isInitializedRef.current) return
 
       try {
         const newUrl = el.getURL()
-        if (!newUrl) return
+        if (!newUrl || !isValidUrl(newUrl)) return
 
         const hostname = new URL(newUrl).hostname
         safeUpdateTab(activeAccountId, activeTabId, {
@@ -133,7 +152,7 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
     }
 
     const handleNavigate = (e: Electron.DidNavigateEvent) => {
-      if (isWebviewDestroyedRef.current || !e.url) return
+      if (!e.url || isWebviewDestroyedRef.current || !isValidUrl(e.url)) return
 
       try {
         const hostname = new URL(e.url).hostname
@@ -147,7 +166,7 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
     }
 
     const handleAudioState = () => {
-      if (isWebviewDestroyedRef.current || !el) return
+      if (!el || isWebviewDestroyedRef.current || !isInitializedRef.current) return
 
       try {
         if (typeof el.isCurrentlyAudible === 'function') {
@@ -155,7 +174,7 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
           const currentUrl = el.getURL()
           const currentTitle = el.getTitle()
 
-          if (currentUrl) {
+          if (currentUrl && isValidUrl(currentUrl)) {
             safeSetAudioState(tabId, {
               isPlaying,
               url: currentUrl,
@@ -164,52 +183,67 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
           }
         }
       } catch (error) {
-        console.warn('Error checking audio state:', error)
+        // Silently ignore audio state errors as they're not critical
       }
     }
 
     const handleLoadFail = (e: Electron.DidFailLoadEvent) => {
-      const { errorCode, errorDescription, validatedURL } = e
-      // Ignore common navigation errors that don't need handling
-      const ignoredCodes = [-3, -27, -105] // ERR_ABORTED, ERR_BLOCKED_BY_CLIENT, ERR_NAME_NOT_RESOLVED
+      const ignoredCodes = [-3, -27, -105, -125] // Added -125 for network change
+      if (ignoredCodes.includes(e.errorCode)) return
 
-      if (ignoredCodes.includes(errorCode)) {
-        console.log(`Navigation issue (${errorCode}): ${validatedURL} - ${errorDescription}`)
-        return
-      }
-
-      console.warn(`Load failed (${errorCode}): ${validatedURL} - ${errorDescription}`)
-
-      // For serious errors, you might want to show an error page
-      if (errorCode === -6) {
-        // ERR_FILE_NOT_FOUND
-        // Could redirect to an error page or retry
-      }
+      console.warn(`Load failed (${e.errorCode}): ${e.validatedURL} - ${e.errorDescription}`)
     }
 
     const handleRenderProcessGone = (event: any) => {
-      console.warn(`Render process ended: ${event.reason}`)
+      const reason = event.reason
+      const exitCode = event.exitCode
+      const el = webviewRef.current
 
-      // If the process crashed, you might want to reload
-      if (event.reason === 'crashed' && el && !isWebviewDestroyedRef.current) {
-        console.log('Attempting to reload crashed webview...')
+      console.warn(`[Webview] Render process gone (reason: ${reason}, exitCode: ${exitCode})`)
+
+      // Mark as destroyed to prevent further operations
+      isWebviewDestroyedRef.current = true
+      isInitializedRef.current = false
+
+      const shouldReload = ['crashed', 'abnormal-exit', 'killed', 'oom'].includes(reason)
+
+      if (shouldReload && el) {
+        console.log(`[Webview] Attempting to reload webview after crash: ${reason}`)
+
+        // Use a more conservative approach for reloading
         setTimeout(() => {
-          if (!isWebviewDestroyedRef.current && el) {
+          if (webviewRef.current && !isWebviewDestroyedRef.current) {
             try {
-              el.reload()
+              isWebviewDestroyedRef.current = false // Reset for reload attempt
+              webviewRef.current.reload()
+              console.log(`[Webview] Reload initiated`)
             } catch (error) {
-              console.warn('Failed to reload webview:', error)
+              console.warn('Reload failed:', error)
+              isWebviewDestroyedRef.current = true
             }
           }
-        }, 1000)
+        }, 1000) // Wait 1 second before attempting reload
       }
     }
 
     const handleNewWindow = (event: any) => {
       console.log('New window requested:', event.url)
-      // Handle popup windows - you might want to open in new tab instead
       event.preventDefault()
-      // Optionally open in new tab or external browser
+
+      // Optionally open in system browser
+      if (event.url && isValidUrl(event.url)) {
+        if ((window as any).api?.shell?.openExternal) {
+          ;(window as any).api.shell.openExternal(event.url)
+        }
+      }
+    }
+
+    const handleDidFailProvisionalLoad = (event: any) => {
+      // Handle provisional load failures more gracefully
+      const ignoredCodes = [-3, -27, -105, -125]
+      if (!ignoredCodes.includes(event.errorCode)) {
+        console.warn(`Provisional load failed (${event.errorCode}): ${event.validatedURL}`)
+      }
     }
 
     // Add event listeners with error handling
@@ -219,19 +253,24 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
       el.addEventListener('did-navigate', handleNavigate)
       el.addEventListener('did-navigate-in-page', handleNavigate)
       el.addEventListener('did-fail-load', handleLoadFail)
+      el.addEventListener('did-fail-provisional-load', handleDidFailProvisionalLoad)
       el.addEventListener('render-process-gone', handleRenderProcessGone)
       el.addEventListener('new-window', handleNewWindow)
     } catch (error) {
       console.warn('Error adding webview listeners:', error)
     }
 
-    // Start audio monitoring with safer interval
-    if (audioIntervalRef.current) {
-      clearInterval(audioIntervalRef.current)
+    // Start audio monitoring with a delay
+    const startAudioMonitoring = () => {
+      if (audioIntervalRef.current) {
+        clearInterval(audioIntervalRef.current)
+      }
+      audioIntervalRef.current = setInterval(handleAudioState, 2000) // Increased interval
     }
-    audioIntervalRef.current = setInterval(handleAudioState, 1000)
 
-    // DevTools toggle on F12
+    // Delay audio monitoring until webview is ready
+    setTimeout(startAudioMonitoring, 1000)
+
     const handleF12 = (e: KeyboardEvent) => {
       if (e.key === 'F12' && el && !isWebviewDestroyedRef.current) {
         try {
@@ -243,7 +282,6 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
     }
     window.addEventListener('keydown', handleF12)
 
-    // Listen for DevTools menu click
     const handleOpenWebviewDevtools = () => {
       if (webviewRef.current && !isWebviewDestroyedRef.current) {
         try {
@@ -255,17 +293,16 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
     }
     window.addEventListener('open-webview-devtools', handleOpenWebviewDevtools)
 
+    // Cleanup function
     return () => {
-      // Mark as destroyed first
       isWebviewDestroyedRef.current = true
+      isInitializedRef.current = false
 
-      // Clear audio interval
       if (audioIntervalRef.current) {
         clearInterval(audioIntervalRef.current)
         audioIntervalRef.current = null
       }
 
-      // Remove event listeners safely
       if (el) {
         try {
           el.removeEventListener('dom-ready', handleDomReady)
@@ -273,21 +310,30 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
           el.removeEventListener('did-navigate', handleNavigate)
           el.removeEventListener('did-navigate-in-page', handleNavigate)
           el.removeEventListener('did-fail-load', handleLoadFail)
+          el.removeEventListener('did-fail-provisional-load', handleDidFailProvisionalLoad)
           el.removeEventListener('render-process-gone', handleRenderProcessGone)
           el.removeEventListener('new-window', handleNewWindow)
         } catch (error) {
-          console.warn('Error removing webview listeners:', error)
+          // Ignore cleanup errors
         }
       }
 
       window.removeEventListener('keydown', handleF12)
       window.removeEventListener('open-webview-devtools', handleOpenWebviewDevtools)
     }
-  }, [activeAccountId, activeTabId, isElectron, tabId, safeUpdateTab, safeSetAudioState])
+  }, [
+    activeAccountId,
+    activeTabId,
+    isElectron,
+    tabId,
+    safeUpdateTab,
+    safeSetAudioState,
+    isValidUrl
+  ])
 
   if (isElectron && !mediaMode) {
     return (
-      <div className="h-full relative overflow-hidden">
+      <div className="h-full relative overflow-hidden bg-white">
         {accounts.length > 0 ? (
           accounts.map((acc) =>
             acc.tabs.map((tab) => (
@@ -298,14 +344,12 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
                 src={tab.url}
                 allowpopups={true}
                 nodeintegration={false}
+                webpreferences="contextIsolation=true,nodeIntegration=false,enableRemoteModule=false"
                 ref={acc.id === activeAccountId && tab.id === activeTabId ? webviewRef : undefined}
                 className={`absolute top-0 left-0 right-0 bottom-0 z-0 ${
                   acc.id === activeAccountId && tab.id === activeTabId ? '' : 'hidden'
                 }`}
-                style={{
-                  width: '100%',
-                  height: '100%'
-                }}
+                style={{ width: '100%', height: '100%' }}
               />
             ))
           )
@@ -317,11 +361,9 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
             src={url}
             allowpopups={true}
             nodeintegration={false}
+            webpreferences="contextIsolation=true,nodeIntegration=false,enableRemoteModule=false"
             className="absolute top-0 left-0 right-0 bottom-0 z-0"
-            style={{
-              width: '100%',
-              height: '100%'
-            }}
+            style={{ width: '100%', height: '100%' }}
           />
         )}
       </div>
@@ -329,15 +371,12 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
   }
 
   return (
-    <div className="h-full relative overflow-hidden">
+    <div className="h-full relative overflow-hidden bg-white">
       <iframe
         src={url}
         className="absolute top-0 left-0 right-0 bottom-0"
-        style={{
-          width: '100%',
-          height: '100%',
-          border: 'none'
-        }}
+        style={{ width: '100%', height: '100%', border: 'none' }}
+        sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-modals"
       />
     </div>
   )
