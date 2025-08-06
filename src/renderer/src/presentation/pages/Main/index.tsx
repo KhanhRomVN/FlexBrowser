@@ -221,7 +221,11 @@ const MainPage: React.FC = () => {
       />
 
       <div className="flex-1 h-full overflow-hidden relative">
-        <WebviewContainer url={activeUrl} isElectron={true} tabId={activeTabId} />
+        {activeUrl.startsWith('code://') ? (
+          <Code onClose={() => handleDeleteTab(activeTabId)} />
+        ) : (
+          <WebviewContainer url={activeUrl} isElectron={true} tabId={activeTabId} />
+        )}
       </div>
 
       <BottomSidebar onOpenCode={() => setShowCode(true)} />

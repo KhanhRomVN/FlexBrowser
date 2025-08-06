@@ -63,7 +63,7 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
       setAvailableModels([])
     }
   }, [selectedAccountId, accounts])
-  const { addTab, setActiveTab, updateTab } = useAccountStore()
+  const { setActiveTab, updateTab } = useAccountStore()
 
   useEffect(() => {
     scrollToBottom()
@@ -98,37 +98,22 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
       const account = signedInAccounts.find((acc) => acc.id === selectedAccountId)
       if (!account) throw new Error('Account not found')
 
-      // Find or create tab for selected AI model
-      let aiTab = account.tabs.find((tab) => tab.aiModel === model)
-      let tabId = aiTab?.id || ''
-
-      if (!aiTab) {
-        tabId = `${account.id}-ai-${Date.now()}`
-        const launchUrls: Record<string, string> = {
-          'gpt-4': 'https://chat.openai.com',
-          chatgpt: 'https://chatgpt.com/?model=auto',
-          'claude-3': 'https://claude.ai/new',
-          deepseek: 'https://chat.deepseek.com',
-          grok: 'https://x.com/grok'
-        }
-        const baseUrl = launchUrls[model] || model
-        const newTab = {
-          id: tabId,
-          title: AI_MODELS.find((m) => m.id === model)?.name || model,
-          url: baseUrl,
-          icon: `https://${new URL(baseUrl).hostname}/favicon.ico`
-        }
-        addTab(account.id, newTab)
-        setActiveTab(account.id, tabId)
-        aiTab = newTab
-
-        // Wait for webview to load
-        await new Promise((resolve) => setTimeout(resolve, 2000))
-      } else {
-        setActiveTab(account.id, tabId)
+      // Use current active tab for sending
+      const tabId = account.activeTabId
+      if (!tabId) {
+        throw new Error('Active tab not found')
       }
+      setActiveTab(account.id, tabId)
+      // slight delay for webview readiness
+      await new Promise((resolve) => setTimeout(resolve, 200))
 
       const webview = document.getElementById(`webview-${tabId}`) as any
+      // Ensure the WebView is attached and ready before executing scripts
+      if (!webview.isDomReady) {
+        await new Promise<void>((resolve) =>
+          webview.addEventListener('dom-ready', () => resolve(), { once: true })
+        )
+      }
       if (!webview) throw new Error('Webview not found')
 
       // Nhập câu hỏi vào ChatGPT
@@ -196,13 +181,12 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
         }
       ])
 
-      // Cập nhật tiêu đề tab với nội dung tóm tắt
-      if (aiTab) {
-        const summary = input.substring(0, 30) + (input.length > 30 ? '...' : '')
-        updateTab(account.id, aiTab.id, {
-          title: `Chat: ${summary}`
-        })
-      }
+      // Update current tab title with summary
+      const activeTabIdCurrent = account.activeTabId!
+      const summary = input.substring(0, 30) + (input.length > 30 ? '...' : '')
+      updateTab(account.id, activeTabIdCurrent, {
+        title: `Chat: ${summary}`
+      })
     } catch (err: any) {
       setError(`Error: ${err.message || 'Something went wrong'}`)
       setMessages((prev) => [
@@ -221,7 +205,7 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
   }
 
   return (
-    <div className="flex flex-col h-full w-full bg-background text-foreground">
+    <div className="flex flex-col h-full w-full bg-background text-foreground pb-16">
       <div className="flex items-center justify-between px-4 py-2 border-b border-border">
         <div className="flex items-center space-x-3">
           <Plus className="w-5 h-5 cursor-pointer hover:text-primary" />

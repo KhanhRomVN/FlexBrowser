@@ -131,9 +131,18 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               className="px-2 py-1"
               onPointerDown={(e) => e.preventDefault()}
               onClick={() => {
-                setView('code')
+                if (activeAccountId) {
+                  const newTabId = `${activeAccountId}-${window.crypto.randomUUID()}`
+                  addTab(activeAccountId, {
+                    id: newTabId,
+                    title: 'Code',
+                    url: 'https://chat.openai.com',
+                    icon: '',
+                    aiModel: 'gpt-4'
+                  })
+                  setActiveTab(activeAccountId, newTabId)
+                }
                 onOpenChange(false)
-                onOpenCode?.()
               }}
             >
               Code
