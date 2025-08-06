@@ -35,17 +35,21 @@ export const MainMenu: React.FC<MainMenuProps> = ({
 
   const handleSignIn = () => {
     if (!activeAccountId) return
-    // Open embedded OAuth in a new in-app tab
-    const oauthUrl = `${window.api.auth.baseUrl}/sign-in?accountId=${activeAccountId}`
-    const newTabId = `${activeAccountId}-${window.crypto.randomUUID()}`
-    addTab(activeAccountId, {
-      id: newTabId,
-      title: 'Google Sign-In',
-      url: oauthUrl,
-      icon: ''
-    })
-    setActiveTab(activeAccountId, newTabId)
-    onOpenChange(false)
+    window.api.auth
+      .loginGoogle(activeAccountId)
+      .then(({ idToken, profile }) => {
+        updateAccount(activeAccountId, {
+          isSignedIn: true,
+          idToken,
+          name: profile.name,
+          picture: profile.picture,
+          email: profile.email
+        })
+        onOpenChange(false)
+      })
+      .catch((error) => {
+        console.error('Login failed:', error)
+      })
   }
 
   const handleLogout = async () => {

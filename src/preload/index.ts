@@ -39,9 +39,8 @@ const api = {
     /** Initiate Google sign-in for accountId, returns OAuth token */
     loginGoogle: (accountId: string) => {
       const oauthUrl = `${OAUTH_BASE_URL}/sign-in?accountId=${accountId}`
-      // Open embedded OAuth window instead of external browser
-      ipcRenderer.invoke('open-auth-window', oauthUrl)
-      ipcRenderer.invoke('hide-main-window')
+      // Open OAuth URL in external system browser
+      ipcRenderer.invoke('open-external', oauthUrl)
       return new Promise<{ idToken: string; profile: { name: string; email?: string; picture?: string } }>((resolve) => {
         ipcRenderer.once('oauth-token', (_event, token: string) => {
           // Decode JWT payload to extract user profile
@@ -63,8 +62,8 @@ const api = {
       })
     },
     /** Listen for OAuth token from main process */
-    onOauthToken: (callback: (token: string) => void) => {
-      ipcRenderer.on('oauth-token', (_event, token: string) => callback(token))
+    onOauthToken: (callback: (token: string, accountId?: string) => void) => {
+      ipcRenderer.on('oauth-token', (_event, token: string, accountId?: string) => callback(token, accountId))
     },
     logoutGoogle: (_accountId: string) => ipcRenderer.invoke('clear-google-session'),
     /** Base URL for embedded OAuth */
@@ -90,6 +89,10 @@ const api = {
   },
   getPath: (name: string) => ipcRenderer.sendSync('get-path', name),
   moveWindow: (x: number, y: number) => ipcRenderer.send('move-pip-window', x, y),
+  shell: {
+    /** Open URL in external system browser */
+    openExternal: (url: string) => ipcRenderer.invoke('open-external', url)
+  },
   hide: {
     main: () => ipcRenderer.invoke('hide-main-window')
   },

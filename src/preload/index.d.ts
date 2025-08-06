@@ -62,6 +62,10 @@ declare global {
         removeItem(key: string): Promise<unknown>
       }
       getPath(name: string): string
+      shell: {
+        /** Open URL in external system browser */
+        openExternal(url: string): Promise<unknown>
+      }
       getCwd(): string
     }
   }
