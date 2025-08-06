@@ -29,8 +29,8 @@ declare global {
           idToken: string
           profile: { name: string; email?: string; picture?: string }
         }>
-        /** Listen for OAuth token from main process */
-        onOauthToken(callback: (token: string) => void): void
+        /** Listen for OAuth token (and optional accountId) from main process */
+        onOauthToken(callback: (token: string, accountId?: string) => void): void
         /** Logout Google session for accountId */
         logoutGoogle(accountId: string): Promise<unknown>
         /** Base URL for embedded OAuth */

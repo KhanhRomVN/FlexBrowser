@@ -83,9 +83,24 @@ const api = {
     clearGoogle: () => ipcRenderer.invoke('clear-google-session')
   },
   storage: {
-    getItem: (key: string) => ipcRenderer.invoke('storage:get', key),
-    setItem: (key: string, value: string) => ipcRenderer.invoke('storage:set', key, value),
-    removeItem: (key: string) => ipcRenderer.invoke('storage:remove', key)
+    /** Get item as JSON string or null */
+    getItem: (key: string): Promise<string | null> =>
+      ipcRenderer.invoke('storage:get', key).then((val) =>
+        val === undefined ? null : JSON.stringify(val)
+      ),
+    /** Set item by parsing JSON string */
+    setItem: (key: string, value: string): Promise<unknown> => {
+      let parsed: unknown
+      try {
+        parsed = JSON.parse(value)
+      } catch {
+        parsed = value
+      }
+      return ipcRenderer.invoke('storage:set', key, parsed)
+    },
+    /** Remove item */
+    removeItem: (key: string): Promise<unknown> =>
+      ipcRenderer.invoke('storage:remove', key)
   },
   getPath: (name: string) => ipcRenderer.sendSync('get-path', name),
   moveWindow: (x: number, y: number) => ipcRenderer.send('move-pip-window', x, y),
