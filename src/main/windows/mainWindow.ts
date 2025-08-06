@@ -59,5 +59,15 @@ export function createMainWindow(): void {
     win.loadFile(join(__dirname, '../renderer/index.html'))
   }
 
+  // Handle failed loads in main window to ignore aborted navigations
+  win.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+    if (errorCode !== -3) {
+      console.error(`MainWindow failed to load ${validatedURL}: ${errorDescription} (${errorCode})`)
+    }
+  })
+  // Use render-process-gone on webContents instead of deprecated crashed event
+  win.webContents.on('render-process-gone', (_event: Electron.Event, details: Electron.RenderProcessGoneDetails) => {
+    console.error('Render process gone:', details)
+  })
   mainWindow = win
 }

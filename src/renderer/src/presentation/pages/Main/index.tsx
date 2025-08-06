@@ -167,20 +167,6 @@ const MainPage: React.FC = () => {
   const activeTabId = accounts.find((acc) => acc.id === activeAccountId)?.activeTabId || ''
   const activeUrl = tabs.find((t) => t.id === activeTabId)?.url || defaultUrl
 
-  // Show full-screen Code panel
-  if (showCode) {
-    return (
-      <div className="fixed inset-0 z-50 bg-background">
-        <div className="absolute inset-0 bottom-12">
-          <Code onClose={() => setShowCode(false)} />
-        </div>
-        <div className="fixed bottom-0 left-0 right-0">
-          <BottomSidebar onOpenCode={() => setShowCode(true)} />
-        </div>
-      </div>
-    )
-  }
-
   // Show account creation dialog if no accounts
   if (showInit) {
     return (

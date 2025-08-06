@@ -131,6 +131,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               className="px-2 py-1"
               onPointerDown={(e) => e.preventDefault()}
               onClick={() => {
+                setView('code')
                 onOpenChange(false)
                 onOpenCode?.()
               }}
