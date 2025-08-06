@@ -9,7 +9,7 @@ import {
   SelectItem,
   SelectValue
 } from '../../../../components/ui/select'
-import useAccountStore from '../../../../store/useAccountStore'
+import useAccountStore, { AI_MODELS, detectAIModel } from '../../../../store/useAccountStore'
 
 interface CodeProps {
   onClose?: () => void
@@ -33,7 +33,36 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const accounts = useAccountStore((state) => state.accounts)
+  const [availableModels, setAvailableModels] = useState<string[]>([])
+  // Auto-select the current active account when opening Code panel
+  const activeAccountIdFromStore = useAccountStore((state) => state.activeAccountId)
+
+  useEffect(() => {
+    if (activeAccountIdFromStore) {
+      setSelectedAccountId(activeAccountIdFromStore)
+    }
+  }, [activeAccountIdFromStore])
+
+  const getAvailableModels = (accountId: string): string[] => {
+    const account = signedInAccounts.find((acc) => acc.id === accountId)
+    if (!account) return []
+    const models = account.tabs
+      .map((t) => t.aiModel || detectAIModel(t.url))
+      .filter((m): m is string => Boolean(m))
+    return Array.from(new Set(models))
+  }
   const signedInAccounts = accounts.filter((acc) => acc.isSignedIn)
+  useEffect(() => {
+    if (selectedAccountId) {
+      const models = getAvailableModels(selectedAccountId)
+      setAvailableModels(models)
+      if (models.length > 0 && !models.includes(model)) {
+        setModel(models[0])
+      }
+    } else {
+      setAvailableModels([])
+    }
+  }, [selectedAccountId, accounts])
   const { addTab, setActiveTab, updateTab } = useAccountStore()
 
   useEffect(() => {
@@ -69,23 +98,31 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
       const account = signedInAccounts.find((acc) => acc.id === selectedAccountId)
       if (!account) throw new Error('Account not found')
 
-      // Tìm tab ChatGPT hoặc tạo mới
-      let aiTab = account.tabs.find((tab) => tab.url.includes('chat.openai.com'))
+      // Find or create tab for selected AI model
+      let aiTab = account.tabs.find((tab) => tab.aiModel === model)
       let tabId = aiTab?.id || ''
 
       if (!aiTab) {
         tabId = `${account.id}-ai-${Date.now()}`
+        const launchUrls: Record<string, string> = {
+          'gpt-4': 'https://chat.openai.com',
+          chatgpt: 'https://chatgpt.com/?model=auto',
+          'claude-3': 'https://claude.ai/new',
+          deepseek: 'https://chat.deepseek.com',
+          grok: 'https://x.com/grok'
+        }
+        const baseUrl = launchUrls[model] || model
         const newTab = {
           id: tabId,
-          title: 'ChatGPT',
-          url: 'https://chat.openai.com',
-          icon: 'https://chat.openai.com/favicon.ico'
+          title: AI_MODELS.find((m) => m.id === model)?.name || model,
+          url: baseUrl,
+          icon: `https://${new URL(baseUrl).hostname}/favicon.ico`
         }
         addTab(account.id, newTab)
         setActiveTab(account.id, tabId)
         aiTab = newTab
 
-        // Chờ tab tải xong
+        // Wait for webview to load
         await new Promise((resolve) => setTimeout(resolve, 2000))
       } else {
         setActiveTab(account.id, tabId)
@@ -166,7 +203,7 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
           title: `Chat: ${summary}`
         })
       }
-    } catch (err) {
+    } catch (err: any) {
       setError(`Error: ${err.message || 'Something went wrong'}`)
       setMessages((prev) => [
         ...prev,
@@ -254,8 +291,18 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
                 <SelectValue placeholder="Model" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="gpt-3.5">GPT-3.5</SelectItem>
-                <SelectItem value="gpt-4">GPT-4</SelectItem>
+                {availableModels.length === 0 ? (
+                  <div className="py-2 px-3 text-sm text-gray-500">No AI models available</div>
+                ) : (
+                  availableModels.map((modelId) => {
+                    const info = AI_MODELS.find((m) => m.id === modelId)
+                    return (
+                      <SelectItem key={modelId} value={modelId}>
+                        {info?.name || modelId}
+                      </SelectItem>
+                    )
+                  })
+                )}
               </SelectContent>
             </Select>
 
