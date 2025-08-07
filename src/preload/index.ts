@@ -283,7 +283,14 @@ const api = {
       console.error('Failed to get current working directory:', error)
       return ''
     }
-  }
+  },
+  chatgpt: {
+    ask: (prompt: string) =>
+      ipcRenderer.invoke('chatgpt:ask', prompt).catch(err => {
+        console.error('Failed to ask ChatGPT:', err);
+        return { success: false, error: err.message };
+      })
+  },
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
