@@ -8,7 +8,7 @@ export async function getCookiesForDomain(domain: string) {
 
 // Sync Google session token as a cookie across ChatGPT domains
 export async function syncGoogleSession(idToken: string): Promise<void> {
-  const domains = ['chat.openai.com', 'openai.com', 'chatgpt.com']
+  const domains = ['chat.openai.com', 'openai.com', 'chatgpt.com', 'auth.openai.com']
   for (const domain of domains) {
     try {
       await session.defaultSession.cookies.set({
@@ -30,27 +30,32 @@ export async function syncGoogleSession(idToken: string): Promise<void> {
 // Sync ChatGPT session token across the hidden background window's partition
 async function syncChatGPTSession(): Promise<void> {
   try {
-    // Retrieve existing ChatGPT session-token cookie
-    const tokens = await session.defaultSession.cookies.get({
-      domain: 'chat.openai.com',
-      name: '__Secure-next-auth.session-token'
-    })
-    if (tokens.length === 0) return
-
-    // Sync into the hidden chat window's partition
+    const domains = ['chat.openai.com', 'auth.openai.com']
     const chatSession = session.fromPartition('persist:chatgpt-session')
-    const cookie = tokens[0]
-    await chatSession.cookies.set({
-      url: `https://${cookie.domain}`,
-      name: cookie.name,
-      value: cookie.value,
-      domain: cookie.domain,
-      path: cookie.path,
-      secure: cookie.secure,
-      httpOnly: cookie.httpOnly,
-      sameSite: cookie.sameSite,
-      expirationDate: cookie.expirationDate
-    })
+    for (const domain of domains) {
+      const tokens = await session.defaultSession.cookies.get({
+        domain,
+        name: '__Secure-next-auth.session-token'
+      })
+      if (tokens.length === 0) {
+        console.log(`[ipc-handlers] No token found for ${domain}`)
+        continue
+      }
+      for (const cookie of tokens) {
+        await chatSession.cookies.set({
+          url: `https://${domain}`,
+          name: cookie.name,
+          value: cookie.value,
+          domain: cookie.domain,
+          path: cookie.path,
+          secure: cookie.secure,
+          httpOnly: cookie.httpOnly,
+          sameSite: cookie.sameSite,
+          expirationDate: cookie.expirationDate!
+        })
+        console.log(`[ipc-handlers] ChatGPT session token synced for ${domain}`)
+      }
+    }
     console.log('[ipc-handlers] ChatGPT session synced successfully')
   } catch (error: any) {
     console.error('[ipc-handlers] Failed to sync ChatGPT session:', error)
@@ -177,14 +182,24 @@ const ensureChatWindow = async (): Promise<BrowserWindow> => {
     // Wait for auth page to load
     await new Promise(resolve => setTimeout(resolve, 3000))
 
-    // Click Google login if available
+    // Click Google login if available with retry & text match
     const googleLoginClicked = await chatWindow.webContents.executeJavaScript(`
-      (() => {
-        const selectorGoogle = 'button[data-provider="google"], button[data-dd-action-name="Continue with Google"]';
-        const googleBtn = document.querySelector(selectorGoogle);
-        if (googleBtn) {
-          googleBtn.click();
-          return true;
+      (async () => {
+        const TIMEOUT = 10000;
+        const INTERVAL = 500;
+        const start = Date.now();
+        while (Date.now() - start < TIMEOUT) {
+          const buttons = Array.from(document.querySelectorAll('button'));
+          const googleBtn = buttons.find(b =>
+            b.getAttribute('data-provider') === 'google' ||
+            (b.getAttribute('name') === 'intent' && b.getAttribute('value') === 'google') ||
+            b.innerText.trim().toLowerCase().includes('google')
+          );
+          if (googleBtn) {
+            googleBtn.click();
+            return true;
+          }
+          await new Promise(r => setTimeout(r, INTERVAL));
         }
         return false;
       })();
