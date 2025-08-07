@@ -1,5 +1,56 @@
 import { app, ipcMain, BrowserWindow, shell, session } from 'electron'
-import path from 'path'
+import * as path from 'path'
+// Utility to fetch cookies from the default session for a given domain
+export async function getCookiesForDomain(domain: string) {
+  return session.defaultSession.cookies.get({ domain })
+}
+
+// Sync Google session token as a cookie across ChatGPT domains
+export async function syncGoogleSession(idToken: string): Promise<void> {
+  const domains = ['chat.openai.com', 'openai.com', 'chatgpt.com']
+  for (const domain of domains) {
+    try {
+      await session.defaultSession.cookies.set({
+        url: `https://${domain}`,
+        name: '__Secure-next-auth.session-token',
+        value: idToken,
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax'
+      });
+      console.log(`[ipc-handlers] Cookie set successfully for ${domain}`);
+    } catch (error: any) {
+      console.error(`[ipc-handlers] Failed to set cookie for ${domain}:`, error);
+    }
+  }
+}
+// Sync ChatGPT session token across the hidden background window's partition
+async function syncChatGPTSession(): Promise<void> {
+  try {
+    // Retrieve existing ChatGPT session-token cookie
+    const tokens = await session.defaultSession.cookies.get({
+      domain: 'chat.openai.com',
+      name: '__Secure-next-auth.session-token'
+    });
+    if (tokens.length === 0) return;
+    // Sync into the hidden chat window’s partition
+    const chatSession = session.fromPartition('persist:chatgpt-session');
+    const cookie = tokens[0];
+    await chatSession.cookies.set({
+      url: `https://${cookie.domain}`,
+      name: cookie.name,
+      value: cookie.value,
+      domain: cookie.domain,
+      path: cookie.path,
+      secure: cookie.secure,
+      httpOnly: cookie.httpOnly,
+      sameSite: cookie.sameSite
+    });
+    console.log('[ipc-handlers] ChatGPT session synced successfully');
+  } catch (error: any) {
+    console.error('[ipc-handlers] Failed to sync ChatGPT session:', error);
+  }
+}
 
 // Lazy-load a single persistent electron-store instance
 const storePromise = import('electron-store').then(({ default: Store }) =>
@@ -19,29 +70,96 @@ const ensureChatWindow = async (): Promise<BrowserWindow> => {
   console.log('[ipc-handlers] ensureChatWindow invoked');
   if (!chatWindow || chatWindow.isDestroyed()) {
     console.log('[ipc-handlers] Creating new chatWindow');
+    // fetch existing cookies for ChatGPT domain
+    const cookies = await getCookiesForDomain('chat.openai.com');
+
+    // create a dedicated persistent session partition
     chatWindow = new BrowserWindow({
       show: false,
       webPreferences: {
         preload: path.join(__dirname, 'preload/index.js'),
-        contextIsolation: true
+        contextIsolation: true,
+        partition: 'persist:chatgpt-session'
       }
     });
-    console.log('[ipc-handlers] chatWindow created, loading URL...');
+
+    // sync cookies into the new partition’s session
+    const newSession = session.fromPartition('persist:chatgpt-session');
+    for (const cookie of cookies) {
+      // skip cookies without valid domain
+      if (!cookie.domain) continue;
+      // Accept domains starting with "." by stripping the dot
+      const domain = cookie.domain.startsWith('.') ? cookie.domain.slice(1) : cookie.domain;
+      try {
+        await newSession.cookies.set({
+          url: cookie.secure ? `https://${cookie.domain}` : `http://${cookie.domain}`,
+          name: cookie.name,
+          value: cookie.value,
+          domain: cookie.domain,
+          path: cookie.path,
+          secure: cookie.secure,
+          httpOnly: cookie.httpOnly,
+          sameSite: cookie.sameSite
+        });
+      } catch (error: any) {
+        console.error(`[ipc-handlers] Failed to sync cookie ${cookie.name} for domain ${cookie.domain}:`, error);
+      }
+    }
+
+    console.log('[ipc-handlers] chatWindow created, loading URL with synced session...');
+    await syncChatGPTSession();
     await chatWindow.loadURL('https://chat.openai.com');
-    console.log('[ipc-handlers] loadURL completed, waiting for prompt-textarea...');
+    console.log('[ipc-handlers] loadURL completed, checking network status and waiting for prompt-textarea...');
+    // Network connectivity check
+    const isOnline = await chatWindow.webContents.executeJavaScript(`navigator.onLine`, true);
+    if (!isOnline) {
+      throw new Error('NETWORK_OFFLINE');
+    }
+    // Handle potential login redirects
     await chatWindow.webContents.executeJavaScript(`
+      if (window.location.href.includes('auth0')) {
+        window.location.href = 'https://chat.openai.com';
+      }
+    `, true);
+    const status = await chatWindow.webContents.executeJavaScript(`
       new Promise((resolve) => {
-        const waitForInput = () => {
-          if (document.getElementById('prompt-textarea')) {
+        const MAX_ATTEMPTS = 50;
+        let attempts = 0;
+        const checkCondition = () => {
+          attempts++;
+          const textarea = document.querySelector('textarea#prompt-textarea, textarea[data-id="root"]');
+          const loginButton = document.querySelector('button[data-provider="google"], button[data-testid="login-button"]');
+          if (textarea) {
             console.log('[ipc-handlers] prompt-textarea found');
-            resolve(undefined);
+            resolve('READY');
+          } else if (loginButton) {
+            console.log('[ipc-handlers] Login required');
+            resolve('LOGIN_REQUIRED');
+          } else if (attempts >= MAX_ATTEMPTS) {
+            // Diagnostic info before timeout
+            const bodyContent = document.body.innerText.substring(0, 200);
+            console.warn('[ipc-handlers] Body content snapshot:', bodyContent);
+            const errorState = document.querySelector('.error')?.innerText || 'UNKNOWN_STATE';
+            resolve('TIMEOUT:' + errorState);
           } else {
-            setTimeout(waitForInput, 500);
+            setTimeout(checkCondition, 500);
           }
         };
-        waitForInput();
+        checkCondition();
       });
     `, true);
+    if (status === 'LOGIN_REQUIRED') {
+      console.log('[ipc-handlers] Login required in hidden window, clicking login button');
+      await chatWindow.webContents.executeJavaScript(`
+        const btn = document.querySelector('button[data-dd-action-name="Continue with Google"], button[data-testid="welcome-login-button"], button[data-testid="mobile-login-button"]');
+        if (btn) btn.click();
+      `, true);
+      // Wait for login flow to complete
+      await new Promise((res) => setTimeout(res, 5000));
+    }
+    if (status.startsWith('TIMEOUT')) {
+      throw new Error('ELEMENT_TIMEOUT');
+    }
   }
   console.log('[ipc-handlers] Opening DevTools for chatWindow');
   chatWindow!.webContents.openDevTools({ mode: 'detach' });
@@ -132,7 +250,7 @@ export function registerIpcHandlers(): void {
         !!document.querySelector('button[data-testid="send-button"]')
       `, true);
       if (!isLoggedIn) {
-        throw new Error('USER_NOT_LOGGED_IN');
+        console.warn('[ipc-handlers] ChatGPT hidden window not signed in, proceeding anyway');
       }
       // Record initial conversation turns count
       const initialCount: number = await win.webContents.executeJavaScript(
@@ -213,6 +331,17 @@ export function registerIpcHandlers(): void {
     }
   });
 
+  // Sync ChatGPT session handler
+  ipcMain.handle('chatgpt:sync-session', async () => {
+    try {
+      await syncChatGPTSession();
+      return { success: true };
+    } catch (error: any) {
+      console.error('[ipc-handlers] chatgpt:sync-session error:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
   // PiP window movement
   ipcMain.on('move-pip-window', (event, x: number, y: number) => {
     try {
@@ -256,7 +385,7 @@ export function registerIpcHandlers(): void {
     try {
       if (!key || typeof key !== 'string')
         throw new Error('Invalid storage key')
-      const store = await storePromise
+      const store: any = await storePromise
       const value = store.get(key)
       return { success: true, value }
     } catch (error: any) {
@@ -269,7 +398,7 @@ export function registerIpcHandlers(): void {
     try {
       if (!key || typeof key !== 'string')
         throw new Error('Invalid storage key')
-      const store = await storePromise
+      const store: any = await storePromise
       store.set(key, value)
       return { success: true }
     } catch (error: any) {
@@ -282,7 +411,7 @@ export function registerIpcHandlers(): void {
     try {
       if (!key || typeof key !== 'string')
         throw new Error('Invalid storage key')
-      const store = await storePromise
+      const store: any = await storePromise
       store.delete(key)
       return { success: true }
     } catch (error: any) {
@@ -298,7 +427,8 @@ export function registerIpcHandlers(): void {
       const tokenParts = idToken.split('.')
       if (tokenParts.length !== 3)
         throw new Error('Invalid token format')
-      // Here you could implement actual session cookie syncing if needed
+      // perform session syncing
+      await syncGoogleSession(idToken)
       return { success: true }
     } catch (error: any) {
       console.error('Failed to sync Google session:', error)

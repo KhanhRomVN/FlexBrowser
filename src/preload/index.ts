@@ -289,8 +289,14 @@ const api = {
       ipcRenderer.invoke('chatgpt:ask', prompt).catch(err => {
         console.error('Failed to ask ChatGPT:', err);
         return { success: false, error: err.message };
+      }),
+    // Thêm hàm syncSession
+    syncSession: () =>
+      ipcRenderer.invoke('chatgpt:sync-session').catch(err => {
+        console.error('Failed to sync ChatGPT session:', err);
+        return { success: false, error: err.message };
       })
-  },
+  }
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

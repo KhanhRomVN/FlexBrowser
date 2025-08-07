@@ -20,6 +20,8 @@ declare global {
     api: {
       chatgpt: {
         ask: (prompt: string) => Promise<{ success: boolean; response: string; error?: string }>
+        /** Sync hidden ChatGPT window session */
+        syncSession: () => Promise<{ success: boolean; error?: string }>
       }
       storage: {
         getItem(key: string): Promise<string | null>

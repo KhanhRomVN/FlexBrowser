@@ -63,6 +63,7 @@ declare global {
       }
       chatgpt: {
         ask(prompt: string): Promise<{ success: boolean; response: string; error?: string }>
+        syncSession(): Promise<{ success: boolean }>
       }
       getPath(name: string): string
       shell: {
