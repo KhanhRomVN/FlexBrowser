@@ -18,6 +18,9 @@ declare global {
 
   interface Window {
     api: {
+      chatgpt: {
+        ask: (prompt: string) => Promise<{ success: boolean; response: string; error?: string }>
+      }
       storage: {
         getItem(key: string): Promise<string | null>
         setItem(key: string, value: string): Promise<unknown>

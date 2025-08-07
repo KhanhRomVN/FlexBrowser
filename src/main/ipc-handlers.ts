@@ -13,9 +13,12 @@ const storePromise = import('electron-store').then(({ default: Store }) =>
 
 import { openPipWindow } from './windows/pipWindow'
 // ChatGPT hidden background window
+console.log('[ipc-handlers] Module loaded');
 let chatWindow: BrowserWindow | null = null;
 const ensureChatWindow = async (): Promise<BrowserWindow> => {
+  console.log('[ipc-handlers] ensureChatWindow invoked');
   if (!chatWindow || chatWindow.isDestroyed()) {
+    console.log('[ipc-handlers] Creating new chatWindow');
     chatWindow = new BrowserWindow({
       show: false,
       webPreferences: {
@@ -23,10 +26,28 @@ const ensureChatWindow = async (): Promise<BrowserWindow> => {
         contextIsolation: true
       }
     });
+    console.log('[ipc-handlers] chatWindow created, loading URL...');
     await chatWindow.loadURL('https://chat.openai.com');
-    await new Promise(resolve => chatWindow!.webContents.once('dom-ready', resolve));
+    console.log('[ipc-handlers] loadURL completed, waiting for prompt-textarea...');
+    await chatWindow.webContents.executeJavaScript(`
+      new Promise((resolve) => {
+        const waitForInput = () => {
+          if (document.getElementById('prompt-textarea')) {
+            console.log('[ipc-handlers] prompt-textarea found');
+            resolve(undefined);
+          } else {
+            setTimeout(waitForInput, 500);
+          }
+        };
+        waitForInput();
+      });
+    `, true);
   }
-  return chatWindow;
+  console.log('[ipc-handlers] Opening DevTools for chatWindow');
+  chatWindow!.webContents.openDevTools({ mode: 'detach' });
+  console.log('[ipc-handlers] DevTools opened');
+  console.log('[ipc-handlers] Returning chatWindow');
+  return chatWindow!;
 };
 
 import { getMainWindow } from './windows/mainWindow'
@@ -76,47 +97,84 @@ export function registerIpcHandlers(): void {
 
   // ChatGPT ask handler - SỬA Ở ĐÂY
   ipcMain.handle('chatgpt:ask', async (_event, prompt: string) => {
+    console.log('[chatgpt:ask] Received prompt:', prompt)
     try {
       const win = await ensureChatWindow()
-      // Inject prompt
-      await win.webContents.executeJavaScript(`
-        (function() {
-          const inputEl = document.getElementById('prompt-textarea');
-          if (!inputEl) return 'INPUT_NOT_FOUND';
-          inputEl.textContent = ${JSON.stringify(prompt)};
-          inputEl.dispatchEvent(new InputEvent('input', { bubbles: true }));
-          return 'SUCCESS';
-        })();
-      `, true)
-      // Click send button
-      await win.webContents.executeJavaScript(`
-        (function() {
-          const btn = document.getElementById('composer-submit-button');
-          btn?.click();
-        })();
-      `, true)
-      // Wait for response text
-      const response: string = await win.webContents.executeJavaScript(`
+      console.log('[chatgpt:ask] Chat window ready')
+      // Start a fresh chat to clear welcome message
+      const newChatResult = await win.webContents.executeJavaScript(`
         new Promise((resolve, reject) => {
-          let attempts = 0
-          const interval = setInterval(() => {
-            attempts++
-            const turns = document.querySelectorAll('[data-testid^="conversation-turn-"]')
-            if (turns.length) {
-              const last = turns[turns.length - 1]
-              if (!last.querySelector('.result-streaming')) {
-                const contentEl = last.querySelector('.markdown')
-                clearInterval(interval)
-                resolve(contentEl ? contentEl.textContent : '')
-              }
+          const link = document.querySelector('a[href="/chat"]') || document.querySelector('a[href="/?model=gpt-4"]');
+          if (!link) return reject('NEW_CHAT_LINK_NOT_FOUND');
+          link.click();
+          resolve('NEW_CHAT_CLICKED');
+        });
+      `, true);
+      console.log('[chatgpt:ask] newChatResult:', newChatResult);
+      // Record initial conversation turns count
+      const initialCount: number = await win.webContents.executeJavaScript(
+        `document.querySelectorAll('[data-testid^="conversation-turn-"]').length`,
+        true
+      )
+      console.log('[chatgpt:ask] Initial turn count:', initialCount)
+      // Inject prompt using textarea selector with error handling
+      await win.webContents.executeJavaScript(`
+        new Promise((resolve, reject) => {
+          try {
+            const textarea = document.querySelector('textarea');
+            if (!textarea) {
+              return reject('TEXTAREA_NOT_FOUND');
             }
-            if (attempts >= 60) {
-              clearInterval(interval)
-              reject('Timeout waiting for ChatGPT response')
-            }
-          }, 1000)
+            textarea.value = ${JSON.stringify(prompt)};
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+            console.log('[ipc-handlers] Prompt injected via textarea');
+            resolve('SUCCESS');
+          } catch (e) {
+            reject(e);
+          }
         });
       `, true)
+      console.log('[chatgpt:ask] Prompt injected successfully')
+      // Click send button using data-testid selector
+      const clickResult = await win.webContents.executeJavaScript(`
+        new Promise((resolve, reject) => {
+          try {
+            const btn = document.querySelector('button[data-testid="send-button"]');
+            if (!btn) return reject('SEND_BUTTON_NOT_FOUND');
+            btn.click();
+            console.log('[ipc-handlers] Send button clicked');
+            resolve('CLICKED');
+          } catch (e) {
+            reject(e);
+          }
+        });
+      `, true);
+      console.log('[chatgpt:ask] clickResult:', clickResult);
+      // Wait for response text, skip initial welcome turns
+      console.log('[chatgpt:ask] Waiting for ChatGPT response...')
+      const response: string = await win.webContents.executeJavaScript(`
+     new Promise((resolve, reject) => {
+       let attempts = 0
+       const initial = ${initialCount}
+       const interval = setInterval(() => {
+         attempts++
+         const turns = document.querySelectorAll('[data-testid^="conversation-turn-"]')
+         if (turns.length > initial) {
+           const last = turns[turns.length - 1]
+           if (!last.querySelector('.result-streaming')) {
+             const contentEl = last.querySelector('.markdown')
+             clearInterval(interval)
+             resolve(contentEl ? contentEl.textContent : '')
+           }
+         }
+         if (attempts >= 60) {
+           clearInterval(interval)
+           reject('Timeout waiting for ChatGPT response')
+         }
+       }, 1000)
+     });
+   `, true)
+      console.log('[chatgpt:ask] Received response length:', response.length)
       return { success: true, response }
     } catch (error: any) {
       console.error('ChatGPT ask error:', error)

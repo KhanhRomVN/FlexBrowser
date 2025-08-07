@@ -54,13 +54,19 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
   const signedInAccounts = accounts.filter((acc) => acc.isSignedIn)
   useEffect(() => {
     if (selectedAccountId) {
-      const models = getAvailableModels(selectedAccountId)
+      let models = getAvailableModels(selectedAccountId)
+      // Ensure default model when none are available
+      if (models.length === 0) {
+        models = ['gpt']
+      }
       setAvailableModels(models)
-      if (models.length > 0 && !models.includes(model)) {
+      if (!models.includes(model)) {
         setModel(models[0])
       }
     } else {
-      setAvailableModels([])
+      // No account selected: fallback to default model
+      setAvailableModels(['gpt'])
+      setModel('gpt')
     }
   }, [selectedAccountId, accounts])
   const { setActiveTab, updateTab } = useAccountStore()
@@ -107,67 +113,14 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
       // slight delay for webview readiness
       await new Promise((resolve) => setTimeout(resolve, 200))
 
-      const webview = document.getElementById(`webview-${tabId}`) as any
-      // Ensure the WebView is attached and ready before executing scripts
-      if (!webview.isDomReady) {
-        await new Promise<void>((resolve) =>
-          webview.addEventListener('dom-ready', () => resolve(), { once: true })
-        )
+      // Ask ChatGPT via IPC
+      console.log('[renderer] Sending prompt to ChatGPT:', input.trim())
+      const chatResult = await window.api.chatgpt.ask(input.trim())
+      console.log('[renderer] Received chatResult:', chatResult)
+      if (!chatResult.success) {
+        throw new Error(chatResult.error || 'ChatGPT ask failed')
       }
-      if (!webview) throw new Error('Webview not found')
-
-      // Nhập câu hỏi vào ChatGPT
-      const inputResult = await webview.executeJavaScript(`
-        (function() {
-          const input = document.querySelector('textarea');
-          if (!input) return 'INPUT_NOT_FOUND';
-          input.value = ${JSON.stringify(input.trim())};
-          input.dispatchEvent(new Event('input', { bubbles: true }));
-          return 'SUCCESS';
-        })();
-      `)
-
-      if (inputResult === 'INPUT_NOT_FOUND') {
-        throw new Error('Could not find ChatGPT input field')
-      }
-
-      // Gửi câu hỏi
-      await webview.executeJavaScript(`
-        (function() {
-          const button = document.querySelector('textarea ~ button');
-          if (button) button.click();
-        })();
-      `)
-
-      // Theo dõi câu trả lời
-      const response = await new Promise<string>((resolve, reject) => {
-        let attempts = 0
-        const maxAttempts = 60 // 60 giây timeout
-        const interval = setInterval(async () => {
-          attempts++
-          const result = await webview.executeJavaScript(`
-            (function() {
-              const messages = document.querySelectorAll('[data-testid^="conversation-turn-"]');
-              if (!messages.length) return null;
-              
-              const lastMessage = messages[messages.length - 1];
-              const isGenerating = lastMessage.querySelector('.result-streaming');
-              if (isGenerating) return null;
-              
-              const content = lastMessage.querySelector('.markdown');
-              return content ? content.innerText : null;
-            })();
-          `)
-
-          if (result) {
-            clearInterval(interval)
-            resolve(result)
-          } else if (attempts >= maxAttempts) {
-            clearInterval(interval)
-            reject(new Error('Timeout waiting for response'))
-          }
-        }, 1000)
-      })
+      const response = chatResult.response
 
       // Cập nhật tin nhắn mới
       setMessages((prev) => [
@@ -188,6 +141,7 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
         title: `Chat: ${summary}`
       })
     } catch (err: any) {
+      console.error('[renderer] ChatGPT handleSend error:', err)
       setError(`Error: ${err.message || 'Something went wrong'}`)
       setMessages((prev) => [
         ...prev,

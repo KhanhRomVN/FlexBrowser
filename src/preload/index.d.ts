@@ -61,6 +61,9 @@ declare global {
         setItem(key: string, value: string): Promise<unknown>
         removeItem(key: string): Promise<unknown>
       }
+      chatgpt: {
+        ask(prompt: string): Promise<{ success: boolean; response: string; error?: string }>
+      }
       getPath(name: string): string
       shell: {
         /** Open URL in external system browser */
