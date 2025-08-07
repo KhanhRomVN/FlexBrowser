@@ -292,9 +292,11 @@ const api = {
       }),
     // Thêm hàm syncSession
     syncSession: () =>
-      ipcRenderer.invoke('chatgpt:sync-session').catch(err => {
-        console.error('Failed to sync ChatGPT session:', err);
-        return { success: false, error: err.message };
+      ipcRenderer.invoke('chatgpt:sync-session').catch(async (err) => {
+        console.error('Failed to sync ChatGPT session, retrying...', err);
+        // Thử đồng bộ lại sau 2 giây
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        return ipcRenderer.invoke('chatgpt:sync-session');
       })
   }
 }

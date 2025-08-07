@@ -1,5 +1,6 @@
 import { app, ipcMain, BrowserWindow, shell, session } from 'electron'
 import * as path from 'path'
+
 // Utility to fetch cookies from the default session for a given domain
 export async function getCookiesForDomain(domain: string) {
   return session.defaultSession.cookies.get({ domain })
@@ -16,14 +17,16 @@ export async function syncGoogleSession(idToken: string): Promise<void> {
         value: idToken,
         httpOnly: true,
         secure: true,
-        sameSite: 'lax'
-      });
-      console.log(`[ipc-handlers] Cookie set successfully for ${domain}`);
+        sameSite: 'lax',
+        expirationDate: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7 // 1 week
+      })
+      console.log(`[ipc-handlers] Cookie set successfully for ${domain}`)
     } catch (error: any) {
-      console.error(`[ipc-handlers] Failed to set cookie for ${domain}:`, error);
+      console.error(`[ipc-handlers] Failed to set cookie for ${domain}:`, error)
     }
   }
 }
+
 // Sync ChatGPT session token across the hidden background window's partition
 async function syncChatGPTSession(): Promise<void> {
   try {
@@ -31,11 +34,12 @@ async function syncChatGPTSession(): Promise<void> {
     const tokens = await session.defaultSession.cookies.get({
       domain: 'chat.openai.com',
       name: '__Secure-next-auth.session-token'
-    });
-    if (tokens.length === 0) return;
-    // Sync into the hidden chat window’s partition
-    const chatSession = session.fromPartition('persist:chatgpt-session');
-    const cookie = tokens[0];
+    })
+    if (tokens.length === 0) return
+
+    // Sync into the hidden chat window's partition
+    const chatSession = session.fromPartition('persist:chatgpt-session')
+    const cookie = tokens[0]
     await chatSession.cookies.set({
       url: `https://${cookie.domain}`,
       name: cookie.name,
@@ -44,11 +48,12 @@ async function syncChatGPTSession(): Promise<void> {
       path: cookie.path,
       secure: cookie.secure,
       httpOnly: cookie.httpOnly,
-      sameSite: cookie.sameSite
-    });
-    console.log('[ipc-handlers] ChatGPT session synced successfully');
+      sameSite: cookie.sameSite,
+      expirationDate: cookie.expirationDate
+    })
+    console.log('[ipc-handlers] ChatGPT session synced successfully')
   } catch (error: any) {
-    console.error('[ipc-handlers] Failed to sync ChatGPT session:', error);
+    console.error('[ipc-handlers] Failed to sync ChatGPT session:', error)
   }
 }
 
@@ -63,128 +68,184 @@ const storePromise = import('electron-store').then(({ default: Store }) =>
 )
 
 import { openPipWindow } from './windows/pipWindow'
-// ChatGPT hidden background window
-console.log('[ipc-handlers] Module loaded');
-let chatWindow: BrowserWindow | null = null;
-const ensureChatWindow = async (): Promise<BrowserWindow> => {
-  console.log('[ipc-handlers] ensureChatWindow invoked');
-  if (!chatWindow || chatWindow.isDestroyed()) {
-    console.log('[ipc-handlers] Creating new chatWindow');
-    // fetch existing cookies for ChatGPT domain
-    const cookies = await getCookiesForDomain('chat.openai.com');
+import { getMainWindow } from './windows/mainWindow'
 
-    // create a dedicated persistent session partition
+// ChatGPT hidden background window
+let chatWindow: BrowserWindow | null = null
+const ensureChatWindow = async (): Promise<BrowserWindow> => {
+  console.log('[ensureChatWindow] Starting chat window initialization')
+
+  if (!chatWindow || chatWindow.isDestroyed()) {
+    console.log('[ensureChatWindow] Creating new chatWindow')
     chatWindow = new BrowserWindow({
       show: false,
+      width: 1200,
+      height: 800,
       webPreferences: {
-        preload: path.join(__dirname, 'preload/index.js'),
+        preload: path.join(__dirname, '../preload/index.js'),
         contextIsolation: true,
-        partition: 'persist:chatgpt-session'
+        partition: 'persist:chatgpt-session',
+        nodeIntegration: false
       }
-    });
+    })
 
-    // sync cookies into the new partition’s session
-    const newSession = session.fromPartition('persist:chatgpt-session');
-    for (const cookie of cookies) {
-      // skip cookies without valid domain
-      if (!cookie.domain) continue;
-      // Accept domains starting with "." by stripping the dot
-      const domain = cookie.domain.startsWith('.') ? cookie.domain.slice(1) : cookie.domain;
-      try {
-        await newSession.cookies.set({
-          url: cookie.secure ? `https://${cookie.domain}` : `http://${cookie.domain}`,
-          name: cookie.name,
-          value: cookie.value,
-          domain: cookie.domain,
-          path: cookie.path,
-          secure: cookie.secure,
-          httpOnly: cookie.httpOnly,
-          sameSite: cookie.sameSite
-        });
-      } catch (error: any) {
-        console.error(`[ipc-handlers] Failed to sync cookie ${cookie.name} for domain ${cookie.domain}:`, error);
-      }
-    }
+    // Handle new windows (popups)
+    chatWindow.webContents.setWindowOpenHandler((details) => {
+      console.log(`[windowOpenHandler] Requested new window for: ${details.url}`)
 
-    console.log('[ipc-handlers] chatWindow created, loading URL with synced session...');
-    await syncChatGPTSession();
-    await chatWindow.loadURL('https://chat.openai.com');
-    console.log('[ipc-handlers] loadURL completed, checking network status and waiting for prompt-textarea...');
-    // Network connectivity check
-    const isOnline = await chatWindow.webContents.executeJavaScript(`navigator.onLine`, true);
-    if (!isOnline) {
-      throw new Error('NETWORK_OFFLINE');
-    }
-    // Handle potential login redirects
-    await chatWindow.webContents.executeJavaScript(`
-      if (window.location.href.includes('auth0')) {
-        window.location.href = 'https://chat.openai.com';
+      if (details.url.includes('accounts.google.com')) {
+        console.log('[windowOpenHandler] Redirecting Google auth to external browser')
+        shell.openExternal(details.url)
+      } else if (details.url.includes('openai.com') || details.url.includes('chatgpt.com')) {
+        console.log(`[windowOpenHandler] Loading in chatWindow: ${details.url}`)
+        chatWindow?.loadURL(details.url)
+      } else {
+        console.log(`[windowOpenHandler] Opening externally: ${details.url}`)
+        shell.openExternal(details.url)
       }
-    `, true);
-    const status = await chatWindow.webContents.executeJavaScript(`
-      new Promise((resolve) => {
-        const MAX_ATTEMPTS = 50;
-        let attempts = 0;
-        const checkCondition = () => {
-          attempts++;
-          const textarea = document.querySelector('textarea#prompt-textarea, textarea[data-id="root"]');
-          const loginButton = document.querySelector('button[data-provider="google"], button[data-testid="login-button"]');
-          if (textarea) {
-            console.log('[ipc-handlers] prompt-textarea found');
-            resolve('READY');
-          } else if (loginButton) {
-            console.log('[ipc-handlers] Login required');
-            resolve('LOGIN_REQUIRED');
-          } else if (attempts >= MAX_ATTEMPTS) {
-            // Diagnostic info before timeout
-            const bodyContent = document.body.innerText.substring(0, 200);
-            console.warn('[ipc-handlers] Body content snapshot:', bodyContent);
-            const errorState = document.querySelector('.error')?.innerText || 'UNKNOWN_STATE';
-            resolve('TIMEOUT:' + errorState);
-          } else {
-            setTimeout(checkCondition, 500);
-          }
-        };
-        checkCondition();
-      });
-    `, true);
-    if (status === 'LOGIN_REQUIRED') {
-      console.log('[ipc-handlers] Login required in hidden window, clicking login button');
-      await chatWindow.webContents.executeJavaScript(`
-        const btn = document.querySelector('button[data-dd-action-name="Continue with Google"], button[data-testid="welcome-login-button"], button[data-testid="mobile-login-button"]');
-        if (btn) btn.click();
-      `, true);
-      // Wait for login flow to complete
-      await new Promise((res) => setTimeout(res, 5000));
-    }
-    if (status.startsWith('TIMEOUT')) {
-      throw new Error('ELEMENT_TIMEOUT');
+
+      return { action: 'deny' }
+    })
+  }
+
+  // Check if already logged in
+  const currentURL = chatWindow.webContents.getURL()
+  if (currentURL.startsWith('https://chat.openai.com') ||
+    currentURL.startsWith('https://chatgpt.com')) {
+    console.log('[ensureChatWindow] Already on ChatGPT, checking login status')
+    const isLoggedIn = await chatWindow.webContents.executeJavaScript(`
+      document.querySelector('button[data-testid="send-button"]') !== null
+    `)
+
+    if (isLoggedIn) {
+      console.log('[ensureChatWindow] User is already logged in')
+      return chatWindow
     }
   }
-  console.log('[ipc-handlers] Opening DevTools for chatWindow');
-  chatWindow!.webContents.openDevTools({ mode: 'detach' });
-  console.log('[ipc-handlers] DevTools opened');
-  console.log('[ipc-handlers] Returning chatWindow');
-  return chatWindow!;
-};
 
-import { getMainWindow } from './windows/mainWindow'
+  // Load ChatGPT URL
+  console.log('[ensureChatWindow] Loading ChatGPT URL')
+  await chatWindow.loadURL('https://chatgpt.com')
+
+  // Wait for login state
+  console.log('[ensureChatWindow] Checking login state...')
+  const loginState = await chatWindow.webContents.executeJavaScript(`
+    new Promise((resolve) => {
+      const MAX_CHECKS = 30; // 30 * 500ms = 15 seconds timeout
+      let checks = 0;
+      
+      const checkLoginState = () => {
+        checks++;
+        
+        // Check if logged in
+        const sendButton = document.querySelector('button[data-testid="send-button"]');
+        if (sendButton) {
+          return resolve('LOGGED_IN');
+        }
+        
+        // Check if login button exists
+        const selectorLogin = 'button[data-testid="mobile-login-button"], button[data-testid="login-button"]';
+        const loginButton = document.querySelector(selectorLogin);
+        if (loginButton) {
+          return resolve('LOGIN_REQUIRED');
+        }
+        
+        if (checks >= MAX_CHECKS) {
+          return resolve('TIMEOUT');
+        }
+        
+        setTimeout(checkLoginState, 500);
+      };
+      
+      checkLoginState();
+    });
+  `)
+
+  console.log(`[ensureChatWindow] Login state: ${loginState}`)
+
+  if (loginState === 'LOGIN_REQUIRED') {
+    console.log('[ensureChatWindow] Clicking login button')
+    await chatWindow.webContents.executeJavaScript(`
+      (() => {
+        const selectorBtn = 'button[data-testid="mobile-login-button"], button[data-testid="login-button"]';
+        const btn = document.querySelector(selectorBtn);
+        if (btn) btn.click();
+        return !!btn;
+      })();
+    `)
+
+    // Wait for auth page to load
+    await new Promise(resolve => setTimeout(resolve, 3000))
+
+    // Click Google login if available
+    const googleLoginClicked = await chatWindow.webContents.executeJavaScript(`
+      (() => {
+        const selectorGoogle = 'button[data-provider="google"], button[data-dd-action-name="Continue with Google"]';
+        const googleBtn = document.querySelector(selectorGoogle);
+        if (googleBtn) {
+          googleBtn.click();
+          return true;
+        }
+        return false;
+      })();
+    `)
+
+    console.log(`[ensureChatWindow] Google login clicked: ${googleLoginClicked}`)
+
+    if (!googleLoginClicked) {
+      throw new Error('GOOGLE_LOGIN_BUTTON_NOT_FOUND')
+    }
+
+    // Wait for login completion
+    console.log('[ensureChatWindow] Waiting for login completion...')
+    const loginResult = await chatWindow.webContents.executeJavaScript(`
+      new Promise(resolve => {
+        const MAX_CHECKS = 30;
+        let tries = 0;
+        
+        const check = () => {
+          tries++;
+          const sendButton = document.querySelector('button[data-testid="send-button"]');
+          
+          if (sendButton) {
+            resolve('LOGGED_IN');
+          } else if (tries >= MAX_CHECKS) {
+            resolve('LOGIN_TIMEOUT');
+          } else {
+            setTimeout(check, 1000);
+          }
+        };
+        
+        check();
+      });
+    `)
+
+    console.log(`[ensureChatWindow] Login result: ${loginResult}`)
+
+    if (loginResult !== 'LOGGED_IN') {
+      throw new Error('LOGIN_FAILED: ' + loginResult)
+    }
+  }
+
+  console.log('[ensureChatWindow] Chat window ready')
+  return chatWindow
+}
 
 export function registerIpcHandlers(): void {
   // Simple ping handler
   ipcMain.on('ping', (event) => {
-    event.reply('pong');
-  });
+    event.reply('pong')
+  })
 
   ipcMain.handle('open-pip-window', async (_event, url: string, currentTime?: number) => {
     try {
-      await openPipWindow(url, currentTime);
-      return { success: true };
+      await openPipWindow(url, currentTime)
+      return { success: true }
     } catch (error: any) {
       console.error('Failed to open PiP window:', error)
       return { success: false, error: error.message }
     }
-  });
+  })
 
   ipcMain.handle('hide-main-window', () => {
     try {
@@ -197,7 +258,7 @@ export function registerIpcHandlers(): void {
       console.error('Failed to hide main window:', error)
       return { success: false, error: error.message }
     }
-  });
+  })
 
   ipcMain.handle('show-main-window', () => {
     try {
@@ -211,136 +272,150 @@ export function registerIpcHandlers(): void {
       console.error('Failed to show main window:', error)
       return { success: false, error: error.message }
     }
-  });
+  })
 
-  // ChatGPT ask handler - SỬA Ở ĐÂY
   ipcMain.handle('chatgpt:ask', async (_event, prompt: string) => {
     console.log('[chatgpt:ask] Received prompt:', prompt)
+
     try {
       const win = await ensureChatWindow()
       console.log('[chatgpt:ask] Chat window ready')
-      // Start a fresh chat to clear welcome message
-      const newChatResult = await win.webContents.executeJavaScript(`
-  new Promise((resolve, reject) => {
-    // Try multiple selectors for the new chat button
-    const selectors = [
-      'a[href="/"]', // New homepage
-      'button:has(svg[aria-label="New chat"])', // SVG icon button
-      'div[data-testid="new-chat-button"]', // Data test ID
-      'a[href="/chat"]'
-    ];
-    
-    let link;
-    for (const selector of selectors) {
-      link = document.querySelector(selector);
-      if (link) break;
-    }
-    
-    if (!link) return reject('NEW_CHAT_LINK_NOT_FOUND');
-    link.click();
-    resolve('NEW_CHAT_CLICKED');
-  });
-`, true);
-      console.log('[chatgpt:ask] newChatResult:', newChatResult);
-      // stabilization delay after navigation
-      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Check if user is logged into ChatGPT UI
-      const isLoggedIn = await win.webContents.executeJavaScript(`
-        !!document.querySelector('button[data-testid="send-button"]')
-      `, true);
-      if (!isLoggedIn) {
-        console.warn('[ipc-handlers] ChatGPT hidden window not signed in, proceeding anyway');
-      }
-      // Record initial conversation turns count
-      const initialCount: number = await win.webContents.executeJavaScript(
-        `document.querySelectorAll('[data-testid^="conversation-turn-"]').length`,
-        true
-      )
-      console.log('[chatgpt:ask] Initial turn count:', initialCount)
-      // Inject prompt using retry logic for textarea injection
+      // Start new chat
+      console.log('[chatgpt:ask] Starting new chat')
       await win.webContents.executeJavaScript(`
-        new Promise((resolve, reject) => {
-          const MAX_ATTEMPTS = 10;
-          let attempts = 0;
-
-          const tryInject = () => {
-            attempts++;
-            const textarea = document.querySelector('textarea#prompt-textarea') ||
-                              document.querySelector('textarea');
-
-            if (textarea) {
-              textarea.value = ${JSON.stringify(prompt)};
-              textarea.dispatchEvent(new Event('input', { bubbles: true }));
-              resolve('SUCCESS');
-            } else if (attempts < MAX_ATTEMPTS) {
-              setTimeout(tryInject, 500);
-            } else {
-              reject('TEXTAREA_NOT_FOUND');
-            }
-          };
-
-          tryInject();
-        });
-      `, true)
-      console.log('[chatgpt:ask] Prompt injected successfully')
-      // Click send button using data-testid selector
-      const clickResult = await win.webContents.executeJavaScript(`
-        new Promise((resolve, reject) => {
+        (() => {
           try {
-            const btn = document.querySelector('button[data-testid="send-button"]');
-            if (!btn) return reject('SEND_BUTTON_NOT_FOUND');
-            btn.click();
-            console.log('[ipc-handlers] Send button clicked');
-            resolve('CLICKED');
+            // Try desktop version
+            const newChatBtn = document.querySelector('a[href="/"]')
+            if (newChatBtn) {
+              newChatBtn.click()
+              return true
+            }
+            
+            // Try mobile version
+            const mobileMenuBtn = document.querySelector('button[data-testid="mobile-menu-button"]')
+            if (mobileMenuBtn) {
+              mobileMenuBtn.click()
+              setTimeout(() => {
+                const mobileNewChat = document.querySelector('a[href="/"]')
+                if (mobileNewChat) mobileNewChat.click()
+              }, 500)
+              return true
+            }
+            
+            return false
           } catch (e) {
-            reject(e);
+            console.error('New chat error:', e)
+            return false
           }
-        });
-      `, true);
-      console.log('[chatgpt:ask] clickResult:', clickResult);
-      // Wait for response text, skip initial welcome turns
-      console.log('[chatgpt:ask] Waiting for ChatGPT response...')
-      const response: string = await win.webContents.executeJavaScript(`
-     new Promise((resolve, reject) => {
-       let attempts = 0
-       const initial = ${initialCount}
-       const interval = setInterval(() => {
-         attempts++
-         const turns = document.querySelectorAll('[data-testid^="conversation-turn-"]')
-         if (turns.length > initial) {
-           const last = turns[turns.length - 1]
-           if (!last.querySelector('.result-streaming')) {
-             const contentEl = last.querySelector('.markdown')
-             clearInterval(interval)
-             resolve(contentEl ? contentEl.textContent : '')
-           }
-         }
-         if (attempts >= 60) {
-           clearInterval(interval)
-           reject('Timeout waiting for ChatGPT response')
-         }
-       }, 1000)
-     });
-   `, true)
-      console.log('[chatgpt:ask] Received response length:', response.length)
+        })()
+      `)
+
+      // Wait for new chat to initialize
+      await new Promise(resolve => setTimeout(resolve, 2000))
+
+      // Enter prompt
+      console.log('[chatgpt:ask] Entering prompt')
+      await win.webContents.executeJavaScript(`
+        (() => {
+          try {
+            const selector = 'textarea#prompt-textarea, textarea[data-id="root"], [contenteditable="true"]';
+            const textarea = document.querySelector(selector);
+            
+            if (textarea) {
+              // For contenteditable div
+              if (textarea.contentEditable === 'true') {
+                textarea.innerHTML = ${JSON.stringify(prompt)}
+                const event = new Event('input', { bubbles: true })
+                textarea.dispatchEvent(event)
+              } 
+              // For textarea
+              else {
+                textarea.value = ${JSON.stringify(prompt)}
+                textarea.dispatchEvent(new Event('input', { bubbles: true }))
+              }
+              return true
+            }
+            return false
+          } catch (e) {
+            console.error('Prompt input error:', e)
+            return false
+          }
+        })()
+      `)
+
+      // Send prompt
+      console.log('[chatgpt:ask] Sending prompt')
+      await win.webContents.executeJavaScript(`
+        (() => {
+          try {
+            const sendBtn = document.querySelector('button[data-testid="send-button"]')
+            if (sendBtn) {
+              sendBtn.click()
+              return true
+            }
+            return false
+          } catch (e) {
+            console.error('Send button error:', e)
+            return false
+          }
+        })()
+      `)
+
+      // Wait for response
+      console.log('[chatgpt:ask] Waiting for response...')
+      const response = await win.webContents.executeJavaScript(`
+        new Promise((resolve) => {
+          const MAX_WAIT = 300 // 300 * 1s = 5 minutes
+          let waitCount = 0
+          
+          const checkResponse = () => {
+            waitCount++
+            
+            // Find the stop button (indicates streaming in progress)
+            const stopButton = document.querySelector('button[data-testid="stop-button"]')
+            
+            // Get all messages
+            const messages = document.querySelectorAll('.markdown')
+            
+            if (!stopButton && messages.length > 0) {
+              // Return last message
+              resolve(messages[messages.length - 1].innerText)
+            } else if (waitCount >= MAX_WAIT) {
+              resolve('RESPONSE_TIMEOUT')
+            } else {
+              setTimeout(checkResponse, 1000)
+            }
+          }
+          
+          checkResponse()
+        })
+      `)
+
+      if (response === 'RESPONSE_TIMEOUT') {
+        throw new Error('RESPONSE_TIMEOUT')
+      }
+
+      console.log('[chatgpt:ask] Received response')
       return { success: true, response }
+
     } catch (error: any) {
       console.error('ChatGPT ask error:', error)
       return { success: false, error: error.message }
     }
-  });
+  })
 
   // Sync ChatGPT session handler
   ipcMain.handle('chatgpt:sync-session', async () => {
     try {
-      await syncChatGPTSession();
-      return { success: true };
+      await syncChatGPTSession()
+      return { success: true }
     } catch (error: any) {
-      console.error('[ipc-handlers] chatgpt:sync-session error:', error);
-      return { success: false, error: error.message };
+      console.error('[ipc-handlers] chatgpt:sync-session error:', error)
+      return { success: false, error: error.message }
     }
-  });
+  })
 
   // PiP window movement
   ipcMain.on('move-pip-window', (event, x: number, y: number) => {
@@ -354,7 +429,7 @@ export function registerIpcHandlers(): void {
     } catch (error: any) {
       console.error('Failed to move PiP window:', error)
     }
-  });
+  })
 
   // Close PiP window
   ipcMain.on('close-pip', (event) => {
@@ -366,7 +441,7 @@ export function registerIpcHandlers(): void {
     } catch (error) {
       console.error('Failed to close PiP window:', error)
     }
-  });
+  })
 
   ipcMain.handle('open-external', async (_event, url: string) => {
     try {
@@ -379,7 +454,7 @@ export function registerIpcHandlers(): void {
       console.error('Failed to open external URL:', error)
       return { success: false, error: error.message }
     }
-  });
+  })
 
   ipcMain.handle('storage:get', async (_event, key: string) => {
     try {
@@ -392,7 +467,7 @@ export function registerIpcHandlers(): void {
       console.error('Storage get error:', error)
       return { success: false, error: error.message, value: null }
     }
-  });
+  })
 
   ipcMain.handle('storage:set', async (_event, key: string, value: any) => {
     try {
@@ -405,7 +480,7 @@ export function registerIpcHandlers(): void {
       console.error('Storage set error:', error)
       return { success: false, error: error.message }
     }
-  });
+  })
 
   ipcMain.handle('storage:remove', async (_event, key: string) => {
     try {
@@ -418,7 +493,7 @@ export function registerIpcHandlers(): void {
       console.error('Storage remove error:', error)
       return { success: false, error: error.message }
     }
-  });
+  })
 
   ipcMain.handle('sync-google-session', async (_event, idToken: string) => {
     try {
@@ -434,7 +509,7 @@ export function registerIpcHandlers(): void {
       console.error('Failed to sync Google session:', error)
       return { success: false, error: error.message }
     }
-  });
+  })
 
   ipcMain.handle('clear-google-session', async () => {
     try {
@@ -447,7 +522,7 @@ export function registerIpcHandlers(): void {
       console.error('Failed to clear Google session:', error)
       return { success: false, error: error.message }
     }
-  });
+  })
 
   ipcMain.handle('app-quit', () => {
     try {
@@ -459,7 +534,7 @@ export function registerIpcHandlers(): void {
       console.error('Failed to quit app:', error)
       return { success: false, error: error.message }
     }
-  });
+  })
 
   ipcMain.on('devtools-open', (event) => {
     try {
@@ -470,7 +545,7 @@ export function registerIpcHandlers(): void {
     } catch (error) {
       console.error('Failed to open DevTools:', error)
     }
-  });
+  })
 
   ipcMain.on('get-path', (event, name: string) => {
     try {
@@ -483,15 +558,12 @@ export function registerIpcHandlers(): void {
     } catch (error) {
       console.error('Failed to get path:', error)
     }
-  });
+  })
 
   app.on('before-quit', () => {
     console.log('App is about to quit, cleaning up...')
-  });
-
-  app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
-      app.quit()
+    if (chatWindow && !chatWindow.isDestroyed()) {
+      chatWindow.close()
     }
-  });
+  })
 }
