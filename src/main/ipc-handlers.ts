@@ -2,7 +2,6 @@ import { app, ipcMain, BrowserWindow, shell, session } from 'electron'
 import { getMainWindow } from './windows/mainWindow'
 import { openPipWindow } from './windows/pipWindow'
 import {
-  getCookiesForDomain,
   syncGoogleSession,
   syncChatGPTSession
 } from './ipc/cookies'
