@@ -1,7 +1,7 @@
 import { app, ipcMain, BrowserWindow, shell, session } from 'electron'
 import { getMainWindow } from './windows/mainWindow'
 import { openPipWindow } from './windows/pipWindow'
-import { ensureChatWindow } from './ipc/chatWindow'
+import { ensureChatGPTWindow } from './windows/chatGPTWindow'
 import { storePromise } from './ipc/storage'
 
 // Register all IPC handlers
@@ -51,7 +51,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('chatgpt:ask', async (_event, prompt: string, idToken?: string) => {
     console.log('[chatgpt:ask] Received prompt:', prompt)
     try {
-      const win = await ensureChatWindow(idToken)
+      const win = await ensureChatGPTWindow(idToken)
       // New chat
       await win.webContents.executeJavaScript(`
         (() => {
@@ -126,8 +126,8 @@ export function registerIpcHandlers(): void {
           secure: true,
           sameSite: 'lax'
         })
+        await ensureChatGPTWindow(idToken)
       }
-      await ensureChatWindow()
       return { success: true }
     } catch (error: any) {
       console.error('[ipc-handlers] chatgpt:sync-session error:', error)
