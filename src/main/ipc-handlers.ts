@@ -22,7 +22,7 @@ const ensureChatWindow = async (): Promise<BrowserWindow> => {
     chatWindow = new BrowserWindow({
       show: false,
       webPreferences: {
-        preload: path.join(__dirname, '../preload/index.js'),
+        preload: path.join(__dirname, 'preload/index.js'),
         contextIsolation: true
       }
     });
@@ -103,35 +103,66 @@ export function registerIpcHandlers(): void {
       console.log('[chatgpt:ask] Chat window ready')
       // Start a fresh chat to clear welcome message
       const newChatResult = await win.webContents.executeJavaScript(`
-        new Promise((resolve, reject) => {
-          const link = document.querySelector('a[href="/chat"]') || document.querySelector('a[href="/?model=gpt-4"]');
-          if (!link) return reject('NEW_CHAT_LINK_NOT_FOUND');
-          link.click();
-          resolve('NEW_CHAT_CLICKED');
-        });
-      `, true);
+  new Promise((resolve, reject) => {
+    // Try multiple selectors for the new chat button
+    const selectors = [
+      'a[href="/"]', // New homepage
+      'button:has(svg[aria-label="New chat"])', // SVG icon button
+      'div[data-testid="new-chat-button"]', // Data test ID
+      'a[href="/chat"]'
+    ];
+    
+    let link;
+    for (const selector of selectors) {
+      link = document.querySelector(selector);
+      if (link) break;
+    }
+    
+    if (!link) return reject('NEW_CHAT_LINK_NOT_FOUND');
+    link.click();
+    resolve('NEW_CHAT_CLICKED');
+  });
+`, true);
       console.log('[chatgpt:ask] newChatResult:', newChatResult);
+      // stabilization delay after navigation
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Check if user is logged into ChatGPT UI
+      const isLoggedIn = await win.webContents.executeJavaScript(`
+        !!document.querySelector('button[data-testid="send-button"]')
+      `, true);
+      if (!isLoggedIn) {
+        throw new Error('USER_NOT_LOGGED_IN');
+      }
       // Record initial conversation turns count
       const initialCount: number = await win.webContents.executeJavaScript(
         `document.querySelectorAll('[data-testid^="conversation-turn-"]').length`,
         true
       )
       console.log('[chatgpt:ask] Initial turn count:', initialCount)
-      // Inject prompt using textarea selector with error handling
+      // Inject prompt using retry logic for textarea injection
       await win.webContents.executeJavaScript(`
         new Promise((resolve, reject) => {
-          try {
-            const textarea = document.querySelector('textarea');
-            if (!textarea) {
-              return reject('TEXTAREA_NOT_FOUND');
+          const MAX_ATTEMPTS = 10;
+          let attempts = 0;
+
+          const tryInject = () => {
+            attempts++;
+            const textarea = document.querySelector('textarea#prompt-textarea') ||
+                              document.querySelector('textarea');
+
+            if (textarea) {
+              textarea.value = ${JSON.stringify(prompt)};
+              textarea.dispatchEvent(new Event('input', { bubbles: true }));
+              resolve('SUCCESS');
+            } else if (attempts < MAX_ATTEMPTS) {
+              setTimeout(tryInject, 500);
+            } else {
+              reject('TEXTAREA_NOT_FOUND');
             }
-            textarea.value = ${JSON.stringify(prompt)};
-            textarea.dispatchEvent(new Event('input', { bubbles: true }));
-            console.log('[ipc-handlers] Prompt injected via textarea');
-            resolve('SUCCESS');
-          } catch (e) {
-            reject(e);
-          }
+          };
+
+          tryInject();
         });
       `, true)
       console.log('[chatgpt:ask] Prompt injected successfully')

@@ -142,7 +142,13 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
       })
     } catch (err: any) {
       console.error('[renderer] ChatGPT handleSend error:', err)
-      setError(`Error: ${err.message || 'Something went wrong'}`)
+      // Determine user-friendly error message
+      const errMsg = err.message || 'Something went wrong'
+      let errorMessage = errMsg
+      if (errMsg.includes('NEW_CHAT_LINK_NOT_FOUND')) {
+        errorMessage = 'ChatGPT UI has changed - please update the app'
+      }
+      setError(`Error: ${errorMessage}`)
       setMessages((prev) => [
         ...prev,
         {
