@@ -1,6 +1,5 @@
 import { BrowserWindow, shell, session } from 'electron'
 import * as path from 'path'
-import { syncChatGPTSession } from './cookies'
 
 let chatWindow: BrowserWindow | null = null
 
@@ -16,7 +15,7 @@ export async function ensureChatWindow(idToken?: string): Promise<BrowserWindow>
       webPreferences: {
         preload: path.join(__dirname, '../preload/index.js'),
         contextIsolation: true,
-        partition: 'persist:chatgpt-session',
+        // Removed partition to use default session
         nodeIntegration: false
       }
     })
@@ -39,30 +38,7 @@ export async function ensureChatWindow(idToken?: string): Promise<BrowserWindow>
       }
       return { action: 'deny' }
     })
-    // Sync Google session token directly into chat partition
-    if (idToken) {
-      const chatSession = session.fromPartition('persist:chatgpt-session')
-      try {
-        await chatSession.cookies.set({
-          url: 'https://accounts.google.com',
-          name: '__Secure-next-auth.session-token',
-          value: idToken,
-          httpOnly: true,
-          secure: true,
-          sameSite: 'lax',
-          expirationDate: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7
-        })
-        console.log('[ipc-chatWindow] Google token set in chat partition')
-      } catch (error: any) {
-        console.error('[ipc-chatWindow] Failed to set Google token in chat partition:', error)
-      }
-    }
-    console.log('[ipc-chatWindow] Syncing ChatGPT session')
-    try {
-      await syncChatGPTSession()
-    } catch (error: any) {
-      console.error('[ipc-chatWindow] Session sync failed:', error)
-    }
+    // Removed manual session sync; using default session for cookies now
   }
 
   const currentURL = chatWindow.webContents.getURL()
@@ -102,7 +78,9 @@ export async function ensureChatWindow(idToken?: string): Promise<BrowserWindow>
   `)
 
   console.log(`[ipc-chatWindow] Login state: ${loginState}`)
-  if (loginState === 'LOGIN_REQUIRED') {
+  // Treat TIMEOUT as requiring manual login
+  if (loginState === 'LOGIN_REQUIRED' || loginState === 'TIMEOUT') {
+    console.warn(`[ipc-chatWindow] Login state is ${loginState}, manual login may be required`)
     console.log('[ipc-chatWindow] Showing window for Google login')
     chatWindow?.show()
     chatWindow?.focus()

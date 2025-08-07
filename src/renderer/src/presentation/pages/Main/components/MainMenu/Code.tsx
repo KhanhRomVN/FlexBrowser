@@ -59,7 +59,7 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
     const acct = signedInAccounts.find((acc) => acc.id === selectedAccountId)
     if (acct?.idToken) {
       window.api.session.syncGoogle(acct.idToken)
-      window.api.chatgpt.syncSession(acct.idToken).catch((err: unknown) => {
+      window.api.chatgpt.syncSession().catch((err: unknown) => {
         console.error('[Code] chatgpt.syncSession failed:', err)
       })
     }
@@ -118,7 +118,7 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
       // Sync hidden ChatGPT window session before asking
       if (account.idToken) {
         await window.api.session.syncGoogle(account.idToken)
-        const syncRes = await window.api.chatgpt.syncSession(account.idToken)
+        const syncRes = await window.api.chatgpt.syncSession()
         if (!syncRes.success) {
           throw new Error('CHATGPT_SESSION_SYNC_FAILED')
         }

@@ -1,10 +1,6 @@
 import { app, ipcMain, BrowserWindow, shell, session } from 'electron'
 import { getMainWindow } from './windows/mainWindow'
 import { openPipWindow } from './windows/pipWindow'
-import {
-  syncGoogleSession,
-  syncChatGPTSession
-} from './ipc/cookies'
 import { ensureChatWindow } from './ipc/chatWindow'
 import { storePromise } from './ipc/storage'
 
@@ -121,12 +117,17 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('chatgpt:sync-session', async (_event, idToken?: string) => {
     try {
-      // If a new Google token is provided, sync it first
       if (idToken) {
-        await syncGoogleSession(idToken)
+        await session.defaultSession.cookies.set({
+          url: 'https://chat.openai.com',
+          name: '__Secure-next-auth.session-token',
+          value: idToken,
+          httpOnly: true,
+          secure: true,
+          sameSite: 'lax'
+        })
       }
-      // Always sync ChatGPT session afterwards
-      await syncChatGPTSession()
+      await ensureChatWindow()
       return { success: true }
     } catch (error: any) {
       console.error('[ipc-handlers] chatgpt:sync-session error:', error)
@@ -199,28 +200,7 @@ export function registerIpcHandlers(): void {
     }
   })
 
-  ipcMain.handle('sync-google-session', async (_event, idToken: string) => {
-    try {
-      await syncGoogleSession(idToken)
-      return { success: true }
-    } catch (error: any) {
-      console.error('Failed to sync Google session:', error)
-      return { success: false, error: error.message }
-    }
-  })
 
-  ipcMain.handle('clear-google-session', async () => {
-    try {
-      await session.defaultSession.clearStorageData({
-        storages: ['cookies', 'localstorage', 'websql', 'indexdb']
-      })
-      await session.defaultSession.clearCache()
-      return { success: true }
-    } catch (error: any) {
-      console.error('Failed to clear Google session:', error)
-      return { success: false, error: error.message }
-    }
-  })
 
   ipcMain.handle('app-quit', () => {
     try {
