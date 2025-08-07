@@ -64,7 +64,7 @@ declare global {
       chatgpt: {
         /** Ask ChatGPT with optional idToken for session sync */
         ask(prompt: string, idToken?: string): Promise<{ success: boolean; response: string; error?: string }>
-        syncSession(): Promise<{ success: boolean }>
+        syncSession(idToken?: string): Promise<{ success: boolean }>
       }
       getPath(name: string): string
       shell: {

@@ -291,13 +291,13 @@ const api = {
         console.error('Failed to ask ChatGPT:', err);
         return { success: false, error: err.message };
       }),
-    // Thêm hàm syncSession
-    syncSession: () =>
-      ipcRenderer.invoke('chatgpt:sync-session').catch(async (err) => {
+    // Thêm hàm syncSession với idToken tuỳ chọn
+    syncSession: (idToken?: string) =>
+      ipcRenderer.invoke('chatgpt:sync-session', idToken).catch(async (err) => {
         console.error('Failed to sync ChatGPT session, retrying...', err);
         // Thử đồng bộ lại sau 2 giây
         await new Promise(resolve => setTimeout(resolve, 2000));
-        return ipcRenderer.invoke('chatgpt:sync-session');
+        return ipcRenderer.invoke('chatgpt:sync-session', idToken);
       })
   }
 }

@@ -1,4 +1,4 @@
-import { BrowserWindow, shell } from 'electron'
+import { BrowserWindow, shell, session } from 'electron'
 import * as path from 'path'
 import { syncChatGPTSession } from './cookies'
 
@@ -39,11 +39,23 @@ export async function ensureChatWindow(idToken?: string): Promise<BrowserWindow>
       }
       return { action: 'deny' }
     })
-    // Forward idToken to chat window for direct Google session sync
+    // Sync Google session token directly into chat partition
     if (idToken) {
-      chatWindow?.webContents.once('dom-ready', () => {
-        chatWindow?.webContents.send('set-id-token', idToken)
-      })
+      const chatSession = session.fromPartition('persist:chatgpt-session')
+      try {
+        await chatSession.cookies.set({
+          url: 'https://accounts.google.com',
+          name: '__Secure-next-auth.session-token',
+          value: idToken,
+          httpOnly: true,
+          secure: true,
+          sameSite: 'lax',
+          expirationDate: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7
+        })
+        console.log('[ipc-chatWindow] Google token set in chat partition')
+      } catch (error: any) {
+        console.error('[ipc-chatWindow] Failed to set Google token in chat partition:', error)
+      }
     }
     console.log('[ipc-chatWindow] Syncing ChatGPT session')
     try {

@@ -119,17 +119,14 @@ export function registerIpcHandlers(): void {
     }
   })
 
-  ipcMain.handle('chatgpt:sync-session', async () => {
+  ipcMain.handle('chatgpt:sync-session', async (_event, idToken?: string) => {
     try {
-      // Check existing ChatGPT session cookies before syncing
-      const chatSession = session.fromPartition('persist:chatgpt-session')
-      const existing = await chatSession.cookies.get({})
-      if (existing.length === 0) {
-        console.log('[ipc-handlers] No existing ChatGPT cookies, performing full sync')
-        await syncChatGPTSession()
-      } else {
-        console.log('[ipc-handlers] ChatGPT session cookies exist, skipping sync')
+      // If a new Google token is provided, sync it first
+      if (idToken) {
+        await syncGoogleSession(idToken)
       }
+      // Always sync ChatGPT session afterwards
+      await syncChatGPTSession()
       return { success: true }
     } catch (error: any) {
       console.error('[ipc-handlers] chatgpt:sync-session error:', error)
