@@ -52,10 +52,10 @@ export function registerIpcHandlers(): void {
     }
   })
 
-  ipcMain.handle('chatgpt:ask', async (_event, prompt: string) => {
+  ipcMain.handle('chatgpt:ask', async (_event, prompt: string, idToken?: string) => {
     console.log('[chatgpt:ask] Received prompt:', prompt)
     try {
-      const win = await ensureChatWindow()
+      const win = await ensureChatWindow(idToken)
       // New chat
       await win.webContents.executeJavaScript(`
         (() => {
@@ -121,7 +121,15 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('chatgpt:sync-session', async () => {
     try {
-      await syncChatGPTSession()
+      // Check existing ChatGPT session cookies before syncing
+      const chatSession = session.fromPartition('persist:chatgpt-session')
+      const existing = await chatSession.cookies.get({})
+      if (existing.length === 0) {
+        console.log('[ipc-handlers] No existing ChatGPT cookies, performing full sync')
+        await syncChatGPTSession()
+      } else {
+        console.log('[ipc-handlers] ChatGPT session cookies exist, skipping sync')
+      }
       return { success: true }
     } catch (error: any) {
       console.error('[ipc-handlers] chatgpt:sync-session error:', error)

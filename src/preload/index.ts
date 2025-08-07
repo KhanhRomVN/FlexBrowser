@@ -285,8 +285,9 @@ const api = {
     }
   },
   chatgpt: {
-    ask: (prompt: string) =>
-      ipcRenderer.invoke('chatgpt:ask', prompt).catch(err => {
+    /** Send prompt and idToken to main for ChatGPT */
+    ask: (prompt: string, idToken: string) =>
+      ipcRenderer.invoke('chatgpt:ask', prompt, idToken).catch(err => {
         console.error('Failed to ask ChatGPT:', err);
         return { success: false, error: err.message };
       }),

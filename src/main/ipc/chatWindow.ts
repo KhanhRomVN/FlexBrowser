@@ -1,9 +1,10 @@
 import { BrowserWindow, shell } from 'electron'
 import * as path from 'path'
+import { syncChatGPTSession } from './cookies'
 
 let chatWindow: BrowserWindow | null = null
 
-export async function ensureChatWindow(): Promise<BrowserWindow> {
+export async function ensureChatWindow(idToken?: string): Promise<BrowserWindow> {
   console.log('[ipc-chatWindow] Starting chat window initialization')
 
   if (!chatWindow || chatWindow.isDestroyed()) {
@@ -38,6 +39,18 @@ export async function ensureChatWindow(): Promise<BrowserWindow> {
       }
       return { action: 'deny' }
     })
+    // Forward idToken to chat window for direct Google session sync
+    if (idToken) {
+      chatWindow?.webContents.once('dom-ready', () => {
+        chatWindow?.webContents.send('set-id-token', idToken)
+      })
+    }
+    console.log('[ipc-chatWindow] Syncing ChatGPT session')
+    try {
+      await syncChatGPTSession()
+    } catch (error: any) {
+      console.error('[ipc-chatWindow] Session sync failed:', error)
+    }
   }
 
   const currentURL = chatWindow.webContents.getURL()

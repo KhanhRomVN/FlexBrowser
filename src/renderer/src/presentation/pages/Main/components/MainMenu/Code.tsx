@@ -118,9 +118,12 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
       // Sync hidden ChatGPT window session before asking
       if (account.idToken) {
         await window.api.session.syncGoogle(account.idToken)
-        await window.api.chatgpt.syncSession().catch((err: unknown) => {
-          console.error('[renderer] chatgpt.syncSession error:', err)
-        })
+        const syncRes = await window.api.chatgpt.syncSession()
+        if (!syncRes.success) {
+          throw new Error('CHATGPT_SESSION_SYNC_FAILED')
+        }
+        // ensure sync completes
+        await new Promise((r) => setTimeout(r, 1000))
       }
 
       // Use current active tab for sending
@@ -134,7 +137,11 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
 
       // Ask ChatGPT via IPC
       console.log('[renderer] Sending prompt to ChatGPT:', input.trim())
-      const chatResult = await window.api.chatgpt.ask(input.trim())
+      // Pass idToken into ChatGPT window for direct session sync
+      const chatResult = await window.api.chatgpt.ask(
+        input.trim(),
+        signedInAccounts.find((acc) => acc.id === selectedAccountId)?.idToken || ''
+      )
       console.log('[renderer] Received chatResult:', chatResult)
       if (!chatResult.success) {
         throw new Error(chatResult.error || 'ChatGPT ask failed')

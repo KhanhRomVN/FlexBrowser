@@ -31,32 +31,31 @@ export async function syncChatGPTSession(): Promise<void> {
     try {
         const domains = ['chat.openai.com', 'auth.openai.com']
         const chatSession = session.fromPartition('persist:chatgpt-session')
-        for (const domain of domains) {
-            const tokens = await session.defaultSession.cookies.get({
-                domain,
-                name: '__Secure-next-auth.session-token'
-            })
-            if (tokens.length === 0) {
-                console.log(`[ipc-cookies] No token found for ${domain}`)
-                continue
-            }
-            for (const cookie of tokens) {
-                await chatSession.cookies.set({
-                    url: `https://${domain}`,
-                    name: cookie.name,
-                    value: cookie.value,
-                    domain: cookie.domain,
-                    path: cookie.path,
-                    secure: cookie.secure,
-                    httpOnly: cookie.httpOnly,
-                    sameSite: cookie.sameSite,
-                    expirationDate: cookie.expirationDate!
-                })
-                console.log(`[ipc-cookies] ChatGPT session token synced for ${domain}`)
-            }
+
+        // Fetch token from default session
+        const tokens = await session.defaultSession.cookies.get({
+            name: '__Secure-next-auth.session-token'
+        })
+        if (tokens.length === 0) {
+            console.log('[ipc-cookies] No session token found in default session')
+            return
         }
-        console.log('[ipc-cookies] ChatGPT session synced successfully')
+        const token = tokens[0].value
+
+        for (const domain of domains) {
+            await chatSession.cookies.set({
+                url: `https://${domain}`,
+                name: '__Secure-next-auth.session-token',
+                value: token,
+                httpOnly: true,
+                secure: true,
+                sameSite: 'lax',
+                expirationDate: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7
+            })
+            console.log(`[ipc-cookies] ChatGPT session token synced for ${domain}`)
+        }
     } catch (error: any) {
         console.error('[ipc-cookies] Failed to sync ChatGPT session:', error)
+        throw error
     }
 }

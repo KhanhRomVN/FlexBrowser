@@ -62,7 +62,8 @@ declare global {
         removeItem(key: string): Promise<unknown>
       }
       chatgpt: {
-        ask(prompt: string): Promise<{ success: boolean; response: string; error?: string }>
+        /** Ask ChatGPT with optional idToken for session sync */
+        ask(prompt: string, idToken?: string): Promise<{ success: boolean; response: string; error?: string }>
         syncSession(): Promise<{ success: boolean }>
       }
       getPath(name: string): string
