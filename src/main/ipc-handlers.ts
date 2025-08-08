@@ -1,7 +1,6 @@
 import { app, ipcMain, BrowserWindow, shell, session } from 'electron'
 import { getMainWindow } from './windows/mainWindow'
 import { openPipWindow } from './windows/pipWindow'
-import { ensureChatGPTWindow } from './windows/chatGPTWindow'
 import { storePromise } from './ipc/storage'
 
 // Map lưu tabId -> webContentsId
@@ -61,106 +60,21 @@ export function registerIpcHandlers(): void {
     }
   });
 
-  ipcMain.handle('chatgpt:ask', async (_event, prompt: string, idToken?: string) => {
-    console.log('[chatgpt:ask] Received prompt:', prompt)
-    console.log('[DEBUG] Ensuring ChatGPT window with idToken:', idToken)
-    try {
-      const win = await ensureChatGPTWindow(idToken)
-
-      // New chat
-      await win.webContents.executeJavaScript(`
-        (() => {
-          const btn = document.querySelector('a[href="/"]') ||
-            document.querySelector('button[data-testid="mobile-menu-button"]')
-          if (btn) {
-            btn.click()
-            return true
-          }
-          return false
-        })()
-      `)
-
-      await new Promise((r) => setTimeout(r, 2000))
-
-      // Enter prompt
-      await win.webContents.executeJavaScript(`
-        (() => {
-          const sel = 'textarea#prompt-textarea, textarea[data-id="root"], [contenteditable="true"]'
-          const el = document.querySelector(sel)
-          if (!el) return false
-          if (el.getAttribute('contenteditable') === 'true') {
-            el.innerHTML = ${JSON.stringify(prompt)}
-            el.dispatchEvent(new Event('input', { bubbles: true }))
-          } else {
-            ;(el as HTMLTextAreaElement).value = ${JSON.stringify(prompt)}
-            el.dispatchEvent(new Event('input', { bubbles: true }))
-          }
-          return true
-        })()
-      `)
-
-      // Send
-      await win.webContents.executeJavaScript(`
-        (() => {
-          const btn = document.querySelector('button[data-testid="send-button"]')
-          if (btn) btn.click()
-          return !!btn
-        })()
-      `)
-
-      // Wait for response
-      const response = await win.webContents.executeJavaScript(`
-        new Promise((resolve) => {
-          let count = 0
-          const max = 300
-          const check = () => {
-            count++
-            const stop = document.querySelector('button[data-testid="stop-button"]')
-            const msgs = document.querySelectorAll('.markdown')
-            if (!stop && msgs.length) return resolve(msgs[msgs.length - 1].innerText)
-            if (count >= max) return resolve('RESPONSE_TIMEOUT')
-            setTimeout(check, 1000)
-          }
-          check()
-        })
-      `)
-
-      if (response === 'RESPONSE_TIMEOUT') {
-        throw new Error('RESPONSE_TIMEOUT')
-      }
-      return { success: true, response }
-    } catch (error: any) {
-      console.error('ChatGPT ask error:', error)
-      return { success: false, error: error.message }
-    }
-  })
-
-  ipcMain.handle('chatgpt:sync-session', async (_event, idToken?: string) => {
-    try {
-      if (idToken) {
-        await session.defaultSession.cookies.set({
-          url: 'https://chat.openai.com',
-          name: '__Secure-next-auth.session-token',
-          value: idToken,
-          httpOnly: true,
-          secure: true,
-          sameSite: 'lax'
-        })
-        await ensureChatGPTWindow(idToken)
-      }
-      return { success: true }
-    } catch (error: any) {
-      console.error('[ipc-handlers] chatgpt:sync-session error:', error)
-      return { success: false, error: error.message }
-    }
-  })
 
   ipcMain.handle('chatgpt:ask-via-tab', async (_event, tabId: string, prompt: string, accountId: string) => {
+    let retryCount = 0
+    const maxRetries = 3
+    let webContentsId: number | undefined
+    while (retryCount < maxRetries) {
+      webContentsId = tabToWebContentsMap.get(tabId)
+      if (webContentsId) break
+      retryCount++
+      await new Promise(r => setTimeout(r, 500))
+    }
+    if (!webContentsId) {
+      return { success: false, error: 'WebContents not found after retries' }
+    }
     try {
-      const webContentsId = tabToWebContentsMap.get(tabId)
-      if (!webContentsId) {
-        return { success: false, error: 'WebContents not found for tab' }
-      }
 
       const wc = BrowserWindow.fromId(webContentsId)?.webContents
       if (!wc || wc.isDestroyed()) {

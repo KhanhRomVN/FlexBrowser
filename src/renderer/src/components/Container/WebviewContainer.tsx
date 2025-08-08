@@ -75,6 +75,9 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
       }
     }
 
+    // Immediate registration when component mounts
+    handleRegister()
+
     el.addEventListener('dom-ready', handleRegister)
     return () => {
       el.removeEventListener('dom-ready', handleRegister)
@@ -86,6 +89,13 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
     if (!isElectron || !activeAccountId || !activeTabId) return
     const el = webviewRef.current
     if (!el) return
+    // Register immediately when component updates
+    try {
+      const wcId = el.getWebContentsId()
+      window.api.chatgpt.registerWebview(tabId, wcId)
+    } catch (err) {
+      console.warn('Failed to register webview on update hook:', err)
+    }
 
     // Reset refs for new webview instance
     isWebviewDestroyedRef.current = false

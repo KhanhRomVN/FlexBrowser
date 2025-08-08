@@ -21,10 +21,6 @@ declare global {
   interface Window {
     api: {
       chatgpt: {
-        /** Ask ChatGPT with optional idToken for session sync */
-        ask: (prompt: string, idToken?: string) => Promise<{ success: boolean; response: string; error?: string }>
-        /** Sync hidden ChatGPT window session with optional idToken for session sync */
-        syncSession: (idToken?: string) => Promise<{ success: boolean; error?: string }>
         /** Ask via existing ChatGPT tab */
         askViaTab: (tabId: string, prompt: string, accountId: string) => Promise<{ success: boolean; response: string; error?: string }>
         /** Register a WebView for a tab */

@@ -9,7 +9,11 @@ import {
   SelectItem,
   SelectValue
 } from '../../../../../components/ui/select'
-import useAccountStore, { AI_MODELS, detectAIModel } from '../../../../../store/useAccountStore'
+import useAccountStore, {
+  AI_MODELS,
+  detectAIModel,
+  Account
+} from '../../../../../store/useAccountStore'
 
 interface CodeProps {
   onClose?: () => void
@@ -43,7 +47,21 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
   }
   const [availableTabs, setAvailableTabs] = useState<Tab[]>([])
   const [selectedTabId, setSelectedTabId] = useState<string>('')
-  const accounts = useAccountStore((state) => state.accounts)
+  const accounts: Account[] = useAccountStore((state) => state.accounts)
+
+  // Populate available tabs and default selectedTabId when account changes
+  useEffect(() => {
+    if (!selectedAccountId) {
+      setAvailableTabs([])
+      setSelectedTabId('')
+      return
+    }
+    const acct = accounts.find((acc) => acc.id === selectedAccountId)
+    if (acct) {
+      setAvailableTabs(acct.tabs)
+      setSelectedTabId(acct.activeTabId || '')
+    }
+  }, [selectedAccountId, accounts])
   const [availableModels, setAvailableModels] = useState<string[]>([])
   // Auto-select the current active account when opening Code panel
   const activeAccountIdFromStore = useAccountStore((state) => state.activeAccountId)
@@ -69,9 +87,6 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
     const acct = signedInAccounts.find((acc) => acc.id === selectedAccountId)
     if (acct?.idToken) {
       window.api.session.syncGoogle(acct.idToken)
-      window.api.chatgpt.syncSession().catch((err: unknown) => {
-        console.error('[Code] chatgpt.syncSession failed:', err)
-      })
     }
   }, [selectedAccountId, signedInAccounts])
   useEffect(() => {
@@ -91,24 +106,6 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
       setModel('gpt')
     }
   }, [selectedAccountId, accounts])
-
-  // Tìm các tab ChatGPT đang mở
-  useEffect(() => {
-    if (!selectedAccountId) return
-
-    const account = signedInAccounts.find((acc) => acc.id === selectedAccountId)
-    if (!account) return
-
-    const chatTabs = account.tabs.filter(
-      (tab) => tab.url.includes('chatgpt.com') || tab.url.includes('chat.openai.com')
-    )
-
-    setAvailableTabs(chatTabs)
-
-    if (chatTabs.length > 0 && !selectedTabId) {
-      setSelectedTabId(chatTabs[0].id)
-    }
-  }, [selectedAccountId, accounts, selectedTabId])
   const { setActiveTab, updateTab } = useAccountStore()
 
   useEffect(() => {
@@ -153,38 +150,33 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
       if (account.idToken) {
         console.log('[Code] Syncing session with idToken:', account.idToken)
         await window.api.session.syncGoogle(account.idToken)
-        const syncRes = await window.api.chatgpt.syncSession()
-        console.log('[Code] Sync result:', syncRes)
-        if (!syncRes.success) {
-          throw new Error('CHATGPT_SESSION_SYNC_FAILED')
-        }
         // ensure sync completes
         await new Promise((r) => setTimeout(r, 1000))
       }
 
-      // Use selected ChatGPT tab for sending
-      if (availableTabs.length === 0) {
-        setError('Please open a ChatGPT tab first')
-        return
+      // Use current active tab for sending
+      const tabId = account.activeTabId
+      if (!tabId) {
+        throw new Error('Active tab not found')
       }
-      const selectedTab = availableTabs.find((t) => t.id === selectedTabId)
-      if (!selectedTab) {
-        throw new Error('Selected tab not found')
-      }
+      setActiveTab(account.id, tabId)
       // slight delay for webview readiness
       await new Promise((resolve) => setTimeout(resolve, 200))
 
+      // Ask ChatGPT via existing tab
       console.log('[renderer] Sending prompt to ChatGPT via tab:', input.trim())
-      const tabResult = await window.api.chatgpt.askViaTab(
+      // Ensure webview is ready before sending
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const chatResult = await window.api.chatgpt.askViaTab(
         selectedTabId,
         input.trim(),
         selectedAccountId
       )
-      console.log('[renderer] Received tabResult:', tabResult)
-      if (!tabResult.success) {
-        throw new Error(tabResult.error || 'Failed to get response')
+      console.log('[renderer] Received chatResult:', chatResult)
+      if (!chatResult.success) {
+        throw new Error(chatResult.error || 'ChatGPT ask failed')
       }
-      const response = tabResult.response
+      const response = chatResult.response
 
       // Cập nhật tin nhắn mới
       setMessages((prev) => [
@@ -253,46 +245,6 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
           <div>Last Error: {error}</div>
         </div>
       )}
-
-      {/* Dropdown chọn ChatGPT tab */}
-      <div className="p-2 border-b border-border">
-        {availableTabs.length > 0 ? (
-          <Select value={selectedTabId} onValueChange={setSelectedTabId}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select ChatGPT tab">
-                {selectedTabId ? (
-                  <div className="flex items-center truncate">
-                    <img
-                      src={availableTabs.find((t) => t.id === selectedTabId)?.icon}
-                      alt="tab icon"
-                      className="w-4 h-4 mr-2"
-                    />
-                    <span className="truncate">
-                      {availableTabs.find((t) => t.id === selectedTabId)?.title}
-                    </span>
-                  </div>
-                ) : (
-                  'Select ChatGPT tab'
-                )}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {availableTabs.map((tab) => (
-                <SelectItem key={tab.id} value={tab.id}>
-                  <div className="flex items-center">
-                    <img src={tab.icon} alt={tab.title} className="w-4 h-4 mr-2" />
-                    <span className="truncate max-w-[200px]">{tab.title}</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : (
-          <div className="text-sm text-yellow-600 p-2 bg-yellow-100 rounded">
-            No ChatGPT tabs found. Please open a ChatGPT tab first.
-          </div>
-        )}
-      </div>
       <div className="flex-1 overflow-y-auto p-4">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
