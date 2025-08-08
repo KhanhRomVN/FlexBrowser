@@ -47,6 +47,19 @@ export function registerIpcHandlers(): void {
       return { success: false, error: error.message }
     }
   })
+  // Handle new-tab command from renderer
+  ipcMain.handle('new-tab', async () => {
+    try {
+      const win = getMainWindow();
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('new-tab');
+      }
+      return { success: true };
+    } catch (error: any) {
+      console.error('[ipc-handlers] new-tab error:', error);
+      return { success: false, error: error.message };
+    }
+  });
 
   ipcMain.handle('chatgpt:ask', async (_event, prompt: string, idToken?: string) => {
     console.log('[chatgpt:ask] Received prompt:', prompt)
