@@ -200,6 +200,33 @@ export function registerIpcHandlers(): void {
     }
   })
 
+  // Google OAuth session sync
+  ipcMain.handle('sync-google-session', async (_event, idToken: string) => {
+    try {
+      await session.defaultSession.cookies.set({
+        url: 'https://accounts.google.com',
+        name: 'google_oauth_token',
+        value: idToken,
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax'
+      })
+      return { success: true }
+    } catch (error: any) {
+      console.error('[ipc-handlers] sync-google-session error:', error)
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('clear-google-session', async () => {
+    try {
+      await session.defaultSession.cookies.remove('https://accounts.google.com', 'google_oauth_token')
+      return { success: true }
+    } catch (error: any) {
+      console.error('[ipc-handlers] clear-google-session error:', error)
+      return { success: false, error: error.message }
+    }
+  })
 
 
   ipcMain.handle('app-quit', () => {
