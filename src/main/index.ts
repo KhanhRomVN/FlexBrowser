@@ -6,6 +6,7 @@ import { registerIpcHandlers } from './ipc-handlers'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 
 function handleProtocolURL(protocolUrl: string) {
+  console.log('[DeepLink] Handling protocol URL:', protocolUrl)
   try {
     const urlObj = new URL(protocolUrl)
     const token = urlObj.searchParams.get('token')

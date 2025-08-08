@@ -93,6 +93,12 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return
+    console.log('[Code] Sending message:', {
+      input,
+      model,
+      selectedAccountId,
+      signedIn: !!signedInAccounts.find((a) => a.id === selectedAccountId)
+    })
 
     if (!selectedAccountId || !signedInAccounts.some((acc) => acc.id === selectedAccountId)) {
       setError('Please select a signed-in account to use this feature')
@@ -117,8 +123,10 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
       if (!account) throw new Error('Account not found')
       // Sync hidden ChatGPT window session before asking
       if (account.idToken) {
+        console.log('[Code] Syncing session with idToken:', account.idToken)
         await window.api.session.syncGoogle(account.idToken)
         const syncRes = await window.api.chatgpt.syncSession()
+        console.log('[Code] Sync result:', syncRes)
         if (!syncRes.success) {
           throw new Error('CHATGPT_SESSION_SYNC_FAILED')
         }

@@ -50,6 +50,7 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('chatgpt:ask', async (_event, prompt: string, idToken?: string) => {
     console.log('[chatgpt:ask] Received prompt:', prompt)
+    console.log('[DEBUG] Ensuring ChatGPT window with idToken:', idToken)
     try {
       const win = await ensureChatGPTWindow(idToken)
       // New chat
