@@ -46,6 +46,10 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
     aiModel?: string
   }
   const [availableTabs, setAvailableTabs] = useState<Tab[]>([])
+
+  // ChatGPT specific tabs
+  const [availableChatGPTTabs, setAvailableChatGPTTabs] = useState<Tab[]>([])
+  const [selectedChatGPTTabId, setSelectedChatGPTTabId] = useState<string>('')
   const [selectedTabId, setSelectedTabId] = useState<string>('')
   const accounts: Account[] = useAccountStore((state) => state.accounts)
 
@@ -106,6 +110,24 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
       setModel('gpt')
     }
   }, [selectedAccountId, accounts])
+  // Update ChatGPT-specific tabs when availableTabs change
+  useEffect(() => {
+    const chatTabs = getValidChatGPTTabs(availableTabs)
+    setAvailableChatGPTTabs(chatTabs)
+    if (!selectedChatGPTTabId && chatTabs.length > 0) {
+      setSelectedChatGPTTabId(chatTabs[0].id)
+    }
+  }, [availableTabs])
+
+  // Hàm lọc tab ChatGPT hợp lệ
+  const getValidChatGPTTabs = (tabs: Tab[]): Tab[] => {
+    return tabs.filter((tab) => {
+      // Accept any ChatGPT or chat.openai.com tab, regardless of query params
+      const urlStr = tab.url.toLowerCase()
+      return urlStr.includes('chatgpt.com') || urlStr.includes('chat.openai.com')
+    })
+  }
+
   const { setActiveTab, updateTab } = useAccountStore()
 
   useEffect(() => {
@@ -154,48 +176,63 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
         await new Promise((r) => setTimeout(r, 1000))
       }
 
-      // Use current active tab for sending
-      const tabId = account.activeTabId
-      if (!tabId) {
-        throw new Error('Active tab not found')
-      }
-      setActiveTab(account.id, tabId)
-      // slight delay for webview readiness
-      await new Promise((resolve) => setTimeout(resolve, 200))
-
-      // Ask ChatGPT via existing tab
-      console.log('[renderer] Sending prompt to ChatGPT via tab:', input.trim())
-      // Ensure webview is ready before sending
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      const chatResult = await window.api.chatgpt.askViaTab(
-        selectedTabId,
-        input.trim(),
-        selectedAccountId
-      )
-      console.log('[renderer] Received chatResult:', chatResult)
-      if (!chatResult.success) {
-        throw new Error(chatResult.error || 'ChatGPT ask failed')
-      }
-      const response = chatResult.response
-
-      // Cập nhật tin nhắn mới
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now().toString(),
-          role: 'assistant',
-          content: response,
-          model,
-          timestamp: new Date()
+      // Handle ChatGPT via browser tab
+      if (model === 'chatgpt') {
+        const chatTabs = availableChatGPTTabs
+        // pick first ChatGPT tab if exists, otherwise fallback to active tab
+        const targetTabId = chatTabs[0]?.id || account.activeTabId!
+        setActiveTab(account.id, targetTabId)
+        // slight delay for webview readiness
+        await new Promise((resolve) => setTimeout(resolve, 500))
+        const chatResult = await window.api.chatgpt.askViaTab(
+          targetTabId,
+          input.trim(),
+          selectedAccountId
+        )
+        if (!chatResult.success) {
+          throw new Error(chatResult.error || 'ChatGPT ask failed')
         }
-      ])
-
-      // Update current tab title with summary
-      const activeTabIdCurrent = account.activeTabId!
-      const summary = input.substring(0, 30) + (input.length > 30 ? '...' : '')
-      updateTab(account.id, activeTabIdCurrent, {
-        title: `Chat: ${summary}`
-      })
+        const response = chatResult.response
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            role: 'assistant',
+            content: response,
+            model,
+            timestamp: new Date()
+          }
+        ])
+        const summary = input.substring(0, 30) + (input.length > 30 ? '...' : '')
+        updateTab(account.id, targetTabId, { title: `Chat: ${summary}` })
+      } else {
+        // Fallback for other models
+        const tabId = account.activeTabId
+        if (!tabId) {
+          throw new Error('Active tab not found')
+        }
+        setActiveTab(account.id, tabId)
+        await new Promise((resolve) => setTimeout(resolve, 200))
+        const chatResult = await window.api.chatgpt.askViaTab(
+          tabId,
+          input.trim(),
+          selectedAccountId
+        )
+        if (!chatResult.success) {
+          throw new Error(chatResult.error || 'Ask failed')
+        }
+        const response = chatResult.response
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            role: 'assistant',
+            content: chatResult.response,
+            model,
+            timestamp: new Date()
+          }
+        ])
+      }
     } catch (err: any) {
       console.error('[renderer] ChatGPT handleSend error:', err)
       let errorMessage = err.message || 'Something went wrong'
@@ -246,6 +283,27 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
         </div>
       )}
       <div className="flex-1 overflow-y-auto p-4">
+        {availableChatGPTTabs.length > 1 && (
+          <div className="mb-4">
+            <Select value={selectedChatGPTTabId} onValueChange={setSelectedChatGPTTabId}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Select ChatGPT tab" />
+              </SelectTrigger>
+              <SelectContent className="w-48">
+                {availableChatGPTTabs.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        {availableChatGPTTabs.length === 0 && (
+          <div className="mb-4 text-red-500">
+            No ChatGPT tabs found. Open one at chatgpt.com or chat.openai.com
+          </div>
+        )}
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
             <div className="mb-4 bg-gray-200 dark:bg-gray-700 rounded-full p-4">
@@ -356,6 +414,25 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
                 )}
               </SelectContent>
             </Select>
+            {model === 'chatgpt' && availableChatGPTTabs.length > 1 && (
+              <Select value={selectedChatGPTTabId} onValueChange={setSelectedChatGPTTabId}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Select ChatGPT tab" />
+                </SelectTrigger>
+                <SelectContent className="w-48">
+                  {availableChatGPTTabs.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {availableChatGPTTabs.length === 0 && (
+              <div className="text-red-500">
+                No ChatGPT tabs found. Open one at chatgpt.com or chat.openai.com
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3">
