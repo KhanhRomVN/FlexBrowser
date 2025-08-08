@@ -295,10 +295,33 @@ const api = {
     syncSession: (idToken?: string) =>
       ipcRenderer.invoke('chatgpt:sync-session', idToken).catch(async (err) => {
         console.error('Failed to sync ChatGPT session, retrying...', err);
-        // Thử đồng bộ lại sau 2 giây
+        // Fallback: sync cookie directly if idToken provided
+        if (idToken) {
+          try {
+            document.cookie = `__Secure-next-auth.session-token=${idToken}; path=/; domain=.openai.com; secure; samesite=lax`;
+          } catch (e) {
+            console.error('Fallback cookie set failed:', e);
+          }
+        }
+        // Retry after delay
         await new Promise(resolve => setTimeout(resolve, 2000));
         return ipcRenderer.invoke('chatgpt:sync-session', idToken);
       })
+    ,
+    /** Ask via existing ChatGPT tab */
+    askViaTab: (tabId: string, prompt: string, accountId: string) =>
+      ipcRenderer.invoke('chatgpt:ask-via-tab', tabId, prompt, accountId).catch(err => {
+        console.error('Failed to ask ChatGPT via tab:', err)
+        return { success: false, error: err.message }
+      }),
+
+    /** Register a webview for a tab */
+    registerWebview: (tabId: string, webContentsId: number) =>
+      ipcRenderer.send('register-webview', tabId, webContentsId),
+
+    /** Unregister a webview for a tab */
+    unregisterWebview: (tabId: string) =>
+      ipcRenderer.send('unregister-webview', tabId)
   }
 }
 

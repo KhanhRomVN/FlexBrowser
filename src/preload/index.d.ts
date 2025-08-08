@@ -65,6 +65,12 @@ declare global {
         /** Ask ChatGPT with optional idToken for session sync */
         ask(prompt: string, idToken?: string): Promise<{ success: boolean; response: string; error?: string }>
         syncSession(idToken?: string): Promise<{ success: boolean }>
+        /** Ask via existing ChatGPT tab */
+        askViaTab(tabId: string, prompt: string, accountId: string): Promise<{ success: boolean; response?: string; error?: string }>
+        /** Register a WebView for a tab */
+        registerWebview(tabId: string, webContentsId: number): void
+        /** Unregister a WebView for a tab */
+        unregisterWebview(tabId: string): void
       }
       getPath(name: string): string
       shell: {

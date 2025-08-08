@@ -7,7 +7,9 @@ declare global {
     interface IntrinsicElements {
       webview: React.DetailedHTMLProps<React.HTMLAttributes<WebviewTag>, WebviewTag> & {
         src?: string
-        allowpopups?: boolean
+        allowpopups?: boolean | string
+        nodeintegration?: boolean | string
+        webpreferences?: string
       }
       ERR: React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
         id: number
@@ -21,8 +23,14 @@ declare global {
       chatgpt: {
         /** Ask ChatGPT with optional idToken for session sync */
         ask: (prompt: string, idToken?: string) => Promise<{ success: boolean; response: string; error?: string }>
-        /** Sync hidden ChatGPT window session */
-        syncSession: () => Promise<{ success: boolean; error?: string }>
+        /** Sync hidden ChatGPT window session with optional idToken for session sync */
+        syncSession: (idToken?: string) => Promise<{ success: boolean; error?: string }>
+        /** Ask via existing ChatGPT tab */
+        askViaTab: (tabId: string, prompt: string, accountId: string) => Promise<{ success: boolean; response: string; error?: string }>
+        /** Register a WebView for a tab */
+        registerWebview: (tabId: string, webContentsId: number) => void
+        /** Unregister a WebView for a tab */
+        unregisterWebview: (tabId: string) => void
       }
       storage: {
         getItem(key: string): Promise<string | null>

@@ -60,6 +60,27 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
       return url.startsWith('file://') || url.startsWith('data:')
     }
   }, [])
+  // Register/unregister this webview with main process after DOM ready
+  useEffect(() => {
+    if (!isElectron) return
+    const el = webviewRef.current
+    if (!el) return
+
+    const handleRegister = () => {
+      try {
+        const wcId = el.getWebContentsId()
+        window.api.chatgpt.registerWebview(tabId, wcId)
+      } catch (err) {
+        console.warn('Failed to register webview:', err)
+      }
+    }
+
+    el.addEventListener('dom-ready', handleRegister)
+    return () => {
+      el.removeEventListener('dom-ready', handleRegister)
+      window.api.chatgpt.unregisterWebview(tabId)
+    }
+  }, [tabId, isElectron])
 
   useEffect(() => {
     if (!isElectron || !activeAccountId || !activeTabId) return
@@ -342,8 +363,8 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
                 key={`${acc.id}-${tab.id}`}
                 partition="persist:default"
                 src={tab.url}
-                allowpopups={true}
-                nodeintegration={false}
+                allowpopups={'true' as any}
+                nodeintegration={'false' as any}
                 webpreferences="contextIsolation=true,nodeIntegration=false,enableRemoteModule=false"
                 ref={acc.id === activeAccountId && tab.id === activeTabId ? webviewRef : undefined}
                 className={`absolute top-0 left-0 right-0 bottom-0 z-0 ${
@@ -359,8 +380,8 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
             partition="persist:default"
             ref={webviewRef}
             src={url}
-            allowpopups={true}
-            nodeintegration={false}
+            allowpopups={'true' as any}
+            nodeintegration={'false' as any}
             webpreferences="contextIsolation=true,nodeIntegration=false,enableRemoteModule=false"
             className="absolute top-0 left-0 right-0 bottom-0 z-0"
             style={{ width: '100%', height: '100%' }}

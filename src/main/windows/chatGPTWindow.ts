@@ -50,9 +50,14 @@ export async function ensureChatGPTWindow(idToken?: string): Promise<BrowserWind
     currentURL.startsWith('https://chatgpt.com')
   ) {
     console.log('[ipc-chatGPTWindow] Already on ChatGPT, checking login status')
-    const isLoggedIn = await chatGPTWindow.webContents.executeJavaScript(
-      `document.querySelector('button[data-testid="send-button"]') !== null`
-    )
+    const isLoggedIn = await chatGPTWindow.webContents.executeJavaScript(`
+      (() => {
+        const hasSession = document.cookie.includes('__Secure-next-auth.session-token');
+        const sendButton = document.querySelector('button[data-testid="send-button"]');
+        const newChatButton = document.querySelector('a[href="/"]');
+        return hasSession || sendButton || newChatButton;
+      })()
+    `)
     if (isLoggedIn) {
       console.log('[ipc-chatGPTWindow] User already logged in')
       return chatGPTWindow
@@ -60,7 +65,7 @@ export async function ensureChatGPTWindow(idToken?: string): Promise<BrowserWind
   }
 
   console.log('[ipc-chatGPTWindow] Loading ChatGPT URL')
-  await chatGPTWindow.loadURL('https://chatgpt.com')
+  await chatGPTWindow.loadURL('https://chat.openai.com')
 
   // Add initial page-load delay for content loading
   await new Promise(r => setTimeout(r, 5000));
@@ -87,8 +92,14 @@ export async function ensureChatGPTWindow(idToken?: string): Promise<BrowserWind
       let checks = 0;
       const check = () => {
         checks++;
-        const sendBtn = document.querySelector('button[data-testid="send-button"]');
-        if (sendBtn) return resolve('LOGGED_IN');
+        const loggedInIndicators = [
+          document.querySelector('button[data-testid="send-button"]'),
+          document.querySelector('a[href="/"]'),
+          document.cookie.includes('__Secure-next-auth.session-token')
+        ];
+        if (loggedInIndicators.some(indicator => !!indicator)) {
+          return resolve('LOGGED_IN');
+        }
         const loginBtn = document.querySelector('button[data-testid="mobile-login-button"], button[data-testid="login-button"]');
         if (loginBtn) return resolve('LOGIN_REQUIRED');
         if (checks >= MAX_CHECKS) return resolve('TIMEOUT');
