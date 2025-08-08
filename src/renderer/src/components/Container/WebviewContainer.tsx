@@ -364,7 +364,7 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
 
   if (isElectron && !mediaMode) {
     return (
-      <div className="h-full relative overflow-hidden bg-white">
+      <div className="h-full relative overflow-hidden bg-background">
         {accounts.length > 0 ? (
           accounts.map((acc) =>
             acc.tabs.map((tab) => (
@@ -402,7 +402,7 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
   }
 
   return (
-    <div className="h-full relative overflow-hidden bg-white">
+    <div className="h-full relative overflow-hidden bg-background">
       <iframe
         src={url}
         className="absolute top-0 left-0 right-0 bottom-0"

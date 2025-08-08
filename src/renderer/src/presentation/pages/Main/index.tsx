@@ -130,7 +130,9 @@ const MainPage: React.FC = () => {
       id: newTabId,
       title: 'Bookmarks',
       url: defaultUrl,
-      icon: ''
+      icon: '',
+      messages: [],
+      draft: ''
     })
     setActiveTab(accountId, newTabId)
     setShowInit(false)
@@ -143,7 +145,9 @@ const MainPage: React.FC = () => {
       id: newTabId,
       title: 'Bookmarks',
       url: defaultUrl,
-      icon: ''
+      icon: '',
+      messages: [],
+      draft: ''
     })
     setActiveTab(activeAccountId, newTabId)
   }
@@ -204,13 +208,13 @@ const MainPage: React.FC = () => {
 
   if (showCode) {
     return (
-      <div className="flex flex-col w-full h-screen">
+      <div className="flex flex-col w-full h-screen bg-background">
         <Code onClose={() => setShowCode(false)} />
       </div>
     )
   }
   return (
-    <div className="flex flex-col w-full h-screen">
+    <div className="flex flex-col w-full h-screen bg-background">
       <TabBar
         tabs={tabs}
         activeTabId={activeTabId}
@@ -221,11 +225,18 @@ const MainPage: React.FC = () => {
       />
 
       <div className="flex-1 h-full overflow-hidden relative">
-        {activeUrl.startsWith('code://') ? (
-          <Code onClose={() => handleDeleteTab(activeTabId)} />
-        ) : (
-          <WebviewContainer url={activeUrl} isElectron={true} tabId={activeTabId} />
-        )}
+        {tabs.map((tab) => (
+          <div
+            key={tab.id}
+            className={`absolute inset-0 bg-background ${tab.id === activeTabId ? 'block' : 'hidden'}`}
+          >
+            {tab.url.startsWith('code://') ? (
+              <Code onClose={() => handleDeleteTab(tab.id)} />
+            ) : (
+              <WebviewContainer url={tab.url} isElectron={true} tabId={tab.id} />
+            )}
+          </div>
+        ))}
       </div>
 
       <BottomSidebar onOpenCode={() => setShowCode(true)} />

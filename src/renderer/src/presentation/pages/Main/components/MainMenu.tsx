@@ -136,12 +136,15 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                   addTab(activeAccountId, {
                     id: newTabId,
                     title: 'Code',
-                    url: 'https://chat.openai.com',
+                    url: `code://${newTabId}`,
                     icon: '',
-                    aiModel: 'gpt-4'
+                    messages: [],
+                    draft: ''
                   })
                   setActiveTab(activeAccountId, newTabId)
                 }
+                setView('code')
+                onOpenCode?.()
                 onOpenChange(false)
               }}
             >

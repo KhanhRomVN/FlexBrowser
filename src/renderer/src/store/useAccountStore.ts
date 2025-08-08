@@ -30,6 +30,16 @@ export interface Tab {
   url: string
   icon: string
   aiModel?: string
+  /** Chat messages history for this tab */
+  messages: {
+    id: string
+    role: 'user' | 'assistant'
+    content: string
+    model: string
+    timestamp: string
+  }[]
+  /** Current draft input for this tab */
+  draft: string
 }
 
 export interface Account {
@@ -103,7 +113,7 @@ const useAccountStore = create<AccountState>()(
       addTab: (accountId, tab) =>
         set((state) => {
           const aiModel = detectAIModel(tab.url);
-          const updatedTab = { ...tab, aiModel };
+          const updatedTab = { ...tab, aiModel, messages: [], draft: '' };
           return {
             accounts: state.accounts.map((acc) =>
               acc.id === accountId
