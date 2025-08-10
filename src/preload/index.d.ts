@@ -68,9 +68,9 @@ declare global {
         /** Ask via existing ChatGPT tab */
         askViaTab(tabId: string, prompt: string, accountId: string): Promise<{ success: boolean; response?: string; error?: string }>
         /** Register a WebView for a tab */
-        registerWebview(tabId: string, webContentsId: number): void
+        registerWebview(tabId: string, webContentsId: number): Promise<{ success: boolean }>
         /** Unregister a WebView for a tab */
-        unregisterWebview(tabId: string): void
+        unregisterWebview(tabId: string): Promise<{ success: boolean }>
       }
       getPath(name: string): string
       shell: {

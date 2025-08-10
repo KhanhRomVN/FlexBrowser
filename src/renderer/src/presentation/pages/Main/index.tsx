@@ -40,7 +40,6 @@ const MainPage: React.FC = () => {
   const [showInit, setShowInit] = useState(accounts.length === 0)
   const [initName, setInitName] = useState('')
   const [initGuest, setInitGuest] = useState(false)
-  const [showCode, setShowCode] = useState(false)
   const [initEmail, setInitEmail] = useState('')
 
   // Migrate legacy localStorage to file-based storage on first load
@@ -206,13 +205,6 @@ const MainPage: React.FC = () => {
     )
   }
 
-  if (showCode) {
-    return (
-      <div className="flex flex-col w-full h-screen bg-background">
-        <Code onClose={() => setShowCode(false)} />
-      </div>
-    )
-  }
   return (
     <div className="flex flex-col w-full h-screen bg-background">
       <TabBar
@@ -239,7 +231,7 @@ const MainPage: React.FC = () => {
         ))}
       </div>
 
-      <BottomSidebar onOpenCode={() => setShowCode(true)} />
+      <BottomSidebar />
     </div>
   )
 }

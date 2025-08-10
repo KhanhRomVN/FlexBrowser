@@ -167,7 +167,16 @@ const api = {
       ipcRenderer.invoke('clear-google-session').catch(err => {
         console.error('Failed to clear Google session:', err)
         return { success: false, error: err.message }
-      })
+      }),
+    // ChatGPT Webview registration and messaging
+    chatgpt: {
+      registerWebview: (tabId: string, wcId: number) =>
+        ipcRenderer.invoke('chatgpt:register-webview', tabId, wcId),
+      unregisterWebview: (tabId: string) =>
+        ipcRenderer.invoke('chatgpt:unregister-webview', tabId),
+      askViaTab: (tabId: string, prompt: string, accountId: string) =>
+        ipcRenderer.invoke('chatgpt:ask-via-tab', tabId, prompt, accountId)
+    },
   },
   storage: {
     /** Get item as JSON string or null */

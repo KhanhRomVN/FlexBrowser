@@ -109,6 +109,13 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
     if (!draft.trim() || isLoading) return
     setError('')
     setIsLoading(true)
+    console.log('[Code] handleSend start', {
+      selectedAccountId,
+      selectedChatGPTTabId,
+      selectedTabId,
+      model,
+      draft: draft.trim()
+    })
 
     if (!currentAccount?.isSignedIn) {
       setError('Please select a signed-in account to use this feature')
@@ -133,14 +140,25 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
       // sync session if needed
       if (currentAccount.idToken) {
         await window.api.session.syncGoogle(currentAccount.idToken)
-        await new Promise((r) => setTimeout(r, 500))
+        await new Promise((r) => setTimeout(r, 2000))
       }
 
       // handle ChatGPT model
       if (model === 'chatgpt') {
-        const targetTabId = availableChatGPTTabs[0]?.id || currentAccount.activeTabId!
+        const targetTabId =
+          selectedChatGPTTabId || availableChatGPTTabs[0]?.id || currentAccount.activeTabId!
+        console.log(
+          '[Code] askViaTab targetTabId:',
+          targetTabId,
+          'selectedChatGPTTabId:',
+          selectedChatGPTTabId,
+          'availableChatGPTTabs:',
+          availableChatGPTTabs.map((t) => t.id)
+        )
+        console.log('[Code] Asking via ChatGPT tab:', targetTabId, 'prompt:', draft.trim())
         setActiveTab(currentAccount.id, targetTabId)
-        await new Promise((r) => setTimeout(r, 500))
+        // wait longer to ensure webview is ready after switching tabs
+        await new Promise((r) => setTimeout(r, 3000))
         const chatResult = await window.api.chatgpt.askViaTab(
           targetTabId,
           draft.trim(),
@@ -162,8 +180,9 @@ const Code: React.FC<CodeProps> = ({ onClose }) => {
       } else {
         // fallback for other models
         const tabId = currentAccount.activeTabId
+        console.log('[Code] Non-ChatGPT model, using tab:', tabId, 'prompt:', draft.trim())
         setActiveTab(currentAccount.id, tabId!)
-        await new Promise((r) => setTimeout(r, 200))
+        await new Promise((r) => setTimeout(r, 3000))
         const chatResult = await window.api.chatgpt.askViaTab(
           tabId!,
           draft.trim(),

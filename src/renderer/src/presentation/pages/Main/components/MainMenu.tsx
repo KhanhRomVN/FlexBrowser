@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import History from './MainMenu/History'
-import Code from './MainMenu/Code'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -30,7 +29,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onOpenPasswords,
   onOpenCode
 }) => {
-  const [view, setView] = useState<'main' | 'history' | 'code'>('main')
+  const [view, setView] = useState<'main' | 'history'>('main')
   const { activeAccountId, accounts, updateAccount, addTab, setActiveTab } = useAccountStore()
   const activeAccount: Account | null = activeAccountId
     ? (accounts.find((acc) => acc.id === activeAccountId) ?? null)
@@ -143,8 +142,6 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                   })
                   setActiveTab(activeAccountId, newTabId)
                 }
-                setView('code')
-                onOpenCode?.()
                 onOpenChange(false)
               }}
             >
@@ -257,13 +254,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             <DropdownMenuSeparator />
             <History />
           </>
-        ) : (
-          <>
-            <DropdownMenuLabel className="px-2 py-1 font-semibold">Code</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <Code onClose={() => setView('main')} />
-          </>
-        )}
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   )

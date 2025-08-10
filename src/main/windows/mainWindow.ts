@@ -176,11 +176,7 @@ export function createMainWindow(): void {
 
   win.on('ready-to-show', () => {
     if (!win.isDestroyed()) {
-      console.log('[mainWindow] Ready-to-show, checking cookies for chatgpt.com');
       session.defaultSession.cookies.get({ domain: 'chatgpt.com' })
-        .then((cookies) => {
-          console.log('[mainWindow] Cookies:', cookies.map(c => `${c.name}=${c.value}`));
-        })
         .catch((error) => {
           console.error('[mainWindow] Failed to get cookies:', error);
         });
