@@ -50,6 +50,17 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
     },
     [setAudioState]
   )
+  const getAudioState = useCallback((): boolean => {
+    const el = webviewRef.current
+    if (!el) return false
+
+    try {
+      return el.isCurrentlyAudible?.() || false
+    } catch (e) {
+      console.error('Error checking audio state:', e)
+      return false
+    }
+  }, [])
 
   const isValidUrl = useCallback((testUrl: string): boolean => {
     if (!testUrl || testUrl.trim() === '') return false
@@ -171,20 +182,16 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
 
     const handleAudioState = () => {
       if (!el || isWebviewDestroyedRef.current || !isInitializedRef.current) return
-      try {
-        if (typeof el.isCurrentlyAudible === 'function') {
-          const isPlaying = el.isCurrentlyAudible()
-          const currentUrl = el.getURL()
-          const currentTitle = el.getTitle()
-          if (currentUrl && isValidUrl(currentUrl)) {
-            safeSetAudioState(tabId, {
-              isPlaying,
-              url: currentUrl,
-              title: currentTitle || 'Unknown'
-            })
-          }
-        }
-      } catch {}
+      const isPlaying = getAudioState()
+      const currentUrl = el.getURL()
+      const currentTitle = el.getTitle()
+      if (currentUrl && isValidUrl(currentUrl)) {
+        safeSetAudioState(tabId, {
+          isPlaying,
+          url: currentUrl,
+          title: currentTitle || 'Unknown'
+        })
+      }
     }
 
     const handleLoadFail = (e: Electron.DidFailLoadEvent) => {

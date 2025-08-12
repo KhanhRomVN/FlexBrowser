@@ -170,6 +170,19 @@ const MainPage: React.FC = () => {
   const activeTabId = accounts.find((acc) => acc.id === activeAccountId)?.activeTabId || ''
   const activeUrl = tabs.find((t) => t.id === activeTabId)?.url || defaultUrl
 
+  useEffect(() => {
+    if (accounts.length === 0) return
+    const logInterval = setInterval(() => {
+      const activeAccount = accounts.find((acc) => acc.id === activeAccountId)
+      if (!activeAccount) return
+      console.log(`\n[Tab Monitor] Active Account: ${activeAccount.name}`)
+      activeAccount.tabs.forEach((tab, index) => {
+        const prefix = tab.id === activeAccount.activeTabId ? '▶' : ' '
+        console.log(`${prefix} ${index + 1}. ${tab.title} (${tab.url})`)
+      })
+    }, 5000)
+    return () => clearInterval(logInterval)
+  }, [accounts, activeAccountId])
   // Show account creation dialog if no accounts
   if (showInit) {
     return (

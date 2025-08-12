@@ -16,7 +16,7 @@ export function registerShortcuts(getMainWindow: () => BrowserWindow | null): vo
   globalShortcut.register('Control+Shift+X', toggle)
 }
 
-/**
+/** 
  * Unregister all global shortcuts.
  */
 export function unregisterShortcuts(): void {

@@ -10,4 +10,4 @@ export const storePromise = import('electron-store').then(({ default: Store }) =
         clearInvalidConfig: true,
         watch: false
     })
-)
+)   
