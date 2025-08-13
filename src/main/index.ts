@@ -1,7 +1,7 @@
-import { app } from 'electron'
+import { app, globalShortcut } from 'electron'
 import { createMainWindow, getMainWindow } from './windows/mainWindow'
 
-import { registerShortcuts, unregisterShortcuts } from './shortcuts'
+import { unregisterShortcuts } from './shortcuts'
 import { registerIpcHandlers } from './ipc-handlers'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 
@@ -47,6 +47,11 @@ app.on('open-url', (event, url) => {
   handleProtocolURL(url)
 })
 
+// GPU flags to avoid rendering issues
+app.commandLine.appendSwitch('ignore-gpu-blacklist')
+app.commandLine.appendSwitch('disable-gpu')
+app.commandLine.appendSwitch('disable-gpu-compositing')
+
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.electron')
   app.setLoginItemSettings({ openAtLogin: true })
@@ -60,7 +65,34 @@ app.whenReady().then(() => {
   // Register IPC handlers before creating windows
   registerIpcHandlers()
   createMainWindow()
-  registerShortcuts(getMainWindow)
+  // Toggle logic with safety checks and delay
+  let toggleInProgress = false
+  const toggle = () => {
+    if (toggleInProgress) return
+    toggleInProgress = true
+
+    const win = getMainWindow()
+    if (!win || win.isDestroyed()) {
+      toggleInProgress = false
+      return
+    }
+
+    try {
+      if (win.isVisible()) {
+        win.hide()
+      } else {
+        win.show()
+        win.focus()
+      }
+    } catch (error) {
+      console.error('Toggle error:', error)
+    } finally {
+      toggleInProgress = false
+    }
+  }
+
+  globalShortcut.register('Alt+Shift+X', () => setTimeout(toggle, 100))
+  globalShortcut.register('Control+Shift+X', () => setTimeout(toggle, 100))
 
   app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window))
 

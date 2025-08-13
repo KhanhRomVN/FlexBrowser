@@ -50,17 +50,44 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
     },
     [setAudioState]
   )
-  const getAudioState = useCallback((): boolean => {
+  const isYouTubePlaying = useCallback(async (): Promise<boolean> => {
     const el = webviewRef.current
     if (!el) return false
 
     try {
+      return await el.executeJavaScript(`
+        (function() {
+          const video = document.querySelector('video');
+          if (!video) return false;
+
+          const ytPlayer = document.getElementById('movie_player');
+          if (ytPlayer) {
+            return !ytPlayer.classList.contains('paused-mode');
+          }
+
+          return !video.paused && !video.ended && video.readyState > 2;
+        })()
+      `)
+    } catch (e) {
+      console.error('YouTube detection error:', e)
+      return false
+    }
+  }, [])
+
+  const getAudioState = useCallback(async (): Promise<boolean> => {
+    const el = webviewRef.current
+    if (!el) return false
+
+    try {
+      const isYt = await isYouTubePlaying()
+      if (isYt) return true
+
       return el.isCurrentlyAudible?.() || false
     } catch (e) {
       console.error('Error checking audio state:', e)
       return false
     }
-  }, [])
+  }, [isYouTubePlaying])
 
   const isValidUrl = useCallback((testUrl: string): boolean => {
     if (!testUrl || testUrl.trim() === '') return false
@@ -96,6 +123,7 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
     })
 
     return () => {
+      isWebviewDestroyedRef.current = true
       el.removeEventListener('dom-ready', handleRegister)
       // do not unregister here to allow fallback
     }
@@ -180,16 +208,28 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
       })
     }
 
-    const handleAudioState = () => {
+    const handleAudioState = async () => {
       if (!el || isWebviewDestroyedRef.current || !isInitializedRef.current) return
-      const isPlaying = getAudioState()
+      const isPlaying = await getAudioState()
       const currentUrl = el.getURL()
-      const currentTitle = el.getTitle()
+      let currentTitle = 'Unknown'
+      try {
+        currentTitle = await el.executeJavaScript(`
+          (function() {
+            const ytTitle = document.querySelector('.ytp-title-link')?.textContent;
+            if (ytTitle) return ytTitle;
+            return document.title;
+          })()
+        `)
+      } catch (e) {
+        console.error('Error fetching title:', e)
+        currentTitle = el.getTitle() || 'Unknown'
+      }
       if (currentUrl && isValidUrl(currentUrl)) {
         safeSetAudioState(tabId, {
           isPlaying,
           url: currentUrl,
-          title: currentTitle || 'Unknown'
+          title: currentTitle
         })
       }
     }

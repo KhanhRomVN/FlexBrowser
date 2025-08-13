@@ -72,7 +72,7 @@ export function createMainWindow(): void {
     })
 
     win.webContents.on('did-finish-load', () => {
-      if (!win.isDestroyed()) {
+      if (!win.isDestroyed() && win.webContents && !win.webContents.isDestroyed()) {
         win.blur()
         win.webContents.openDevTools({ mode: 'detach' })
       }
@@ -83,6 +83,7 @@ export function createMainWindow(): void {
 
   // Handle failed loads in main window with better error filtering
   win.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+    if (win.isDestroyed() || !win.webContents || win.webContents.isDestroyed()) return
     // Ignore common non-critical errors
     const ignoredCodes = [-3, -27, -105, -125] // ERR_ABORTED, ERR_BLOCKED_BY_CLIENT, ERR_NAME_NOT_RESOLVED, ERR_NETWORK_CHANGED
 

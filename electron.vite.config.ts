@@ -10,12 +10,14 @@ export default defineConfig({
     // Exclude node-fetch from the bundle so we use the built-in global fetch
     plugins: [externalizeDepsPlugin({ include: ['node-fetch'] })],
     build: {
+      target: 'node16',
       watch: {}
     }
   },
   preload: {
     plugins: [externalizeDepsPlugin()],
     build: {
+      target: 'node16',
       watch: {}
     }
   },

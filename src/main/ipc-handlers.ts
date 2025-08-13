@@ -173,7 +173,8 @@ export function registerIpcHandlers(): void {
       // allow webview to settle
       await new Promise((r) => setTimeout(r, 1000))
 
-      const result = await wc.executeJavaScript(`
+      const result = await Promise.race([
+        wc.executeJavaScript(`
         (async function() {
           try {
             const promptText = ${JSON.stringify(prompt)};
@@ -215,7 +216,11 @@ export function registerIpcHandlers(): void {
             return { success: false, error: e.message };
           }
         })()
-      `)
+      `),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Timeout')), 30000)
+        )
+      ])
 
       return result
     } catch (err: any) {
