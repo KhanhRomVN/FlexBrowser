@@ -19,8 +19,9 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
   const { accounts, activeAccountId } = useAccountStore()
   const activeAccount = accounts.find((acc) => acc.id === activeAccountId)
   const activeTabId = activeAccount?.activeTabId || ''
-  const webviewRef = useRef<Electron.WebviewTag>(null)
+  const webviewRef = useRef<Electron.WebviewTag | null>(null)
   const setAudioState = useGlobalAudioStore((state) => state.setAudioState)
+  const clearAudioState = useGlobalAudioStore((state) => state.clearAudioState)
   const audioIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const isWebviewDestroyedRef = useRef(false)
   const isInitializedRef = useRef(false)
@@ -42,6 +43,7 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
     (tId: string, state: any) => {
       if (!isWebviewDestroyedRef.current) {
         try {
+          console.log(`[safeSetAudioState][${tId}] Setting state:`, state)
           setAudioState(tId, state)
         } catch (error) {
           console.warn('Error setting audio state:', error)
@@ -50,44 +52,6 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
     },
     [setAudioState]
   )
-  const isYouTubePlaying = useCallback(async (): Promise<boolean> => {
-    const el = webviewRef.current
-    if (!el) return false
-
-    try {
-      return await el.executeJavaScript(`
-        (function() {
-          const video = document.querySelector('video');
-          if (!video) return false;
-
-          const ytPlayer = document.getElementById('movie_player');
-          if (ytPlayer) {
-            return !ytPlayer.classList.contains('paused-mode');
-          }
-
-          return !video.paused && !video.ended && video.readyState > 2;
-        })()
-      `)
-    } catch (e) {
-      console.error('YouTube detection error:', e)
-      return false
-    }
-  }, [])
-
-  const getAudioState = useCallback(async (): Promise<boolean> => {
-    const el = webviewRef.current
-    if (!el) return false
-
-    try {
-      const isYt = await isYouTubePlaying()
-      if (isYt) return true
-
-      return el.isCurrentlyAudible?.() || false
-    } catch (e) {
-      console.error('Error checking audio state:', e)
-      return false
-    }
-  }, [isYouTubePlaying])
 
   const isValidUrl = useCallback((testUrl: string): boolean => {
     if (!testUrl || testUrl.trim() === '') return false
@@ -95,9 +59,239 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
       new URL(testUrl)
       return true
     } catch {
-      return testUrl.startsWith('file://') || testUrl.startsWith('data:')
+      return (
+        testUrl.startsWith('file://') ||
+        testUrl.startsWith('data:') ||
+        testUrl.startsWith('code://')
+      )
     }
   }, [])
+
+  // Enhanced audio detection for YouTube and general media
+  const checkAudioState = useCallback(async (): Promise<void> => {
+    const el = webviewRef.current
+    if (!el || isWebviewDestroyedRef.current || !isInitializedRef.current) {
+      return
+    }
+
+    try {
+      const currentUrl = el.getURL()
+      if (!currentUrl || !isValidUrl(currentUrl)) {
+        return
+      }
+
+      console.log(`[checkAudioState][${tabId}] Checking URL:`, currentUrl)
+
+      // Enhanced detection script with better YouTube support
+      const audioData = await el.executeJavaScript(`
+        (function() {
+          const result = {
+            isPlaying: false,
+            title: '',
+            url: window.location.href,
+            debug: {
+              timestamp: Date.now(),
+              hostname: window.location.hostname
+            }
+          };
+          
+          console.log('[Audio Detection] Starting for:', window.location.hostname);
+          
+          // === YouTube Specific Detection ===
+          if (window.location.hostname.includes('youtube.com')) {
+            console.log('[YouTube] Detected YouTube page');
+            
+            // Method 1: YouTube Player API
+            try {
+              const ytPlayer = window.yt?.player?.getPlayerByElement?.(document.querySelector('#movie_player'));
+              if (ytPlayer && typeof ytPlayer.getPlayerState === 'function') {
+                const state = ytPlayer.getPlayerState();
+                result.debug.ytPlayerState = state;
+                console.log('[YouTube] YT Player state:', state);
+                if (state === 1) { // YT_PlayerState.PLAYING
+                  result.isPlaying = true;
+                  console.log('[YouTube] Playing detected via API');
+                }
+              } else {
+                result.debug.ytPlayerError = 'API not available';
+              }
+            } catch (e) {
+              result.debug.ytPlayerError = e.message;
+            }
+            
+            // Method 2: DOM Class Analysis (more reliable)
+            if (!result.isPlaying) {
+              const moviePlayer = document.getElementById('movie_player');
+              if (moviePlayer) {
+                const classes = Array.from(moviePlayer.classList);
+                result.debug.moviePlayerClasses = classes;
+                console.log('[YouTube] Movie player classes:', classes);
+                
+                // Check for playing states
+                const hasPlayingIndicators = classes.some(cls => 
+                  cls.includes('playing') || 
+                  cls.includes('unstarted') ||
+                  cls.includes('buffering')
+                ) && !classes.some(cls => 
+                  cls.includes('paused') || 
+                  cls.includes('ended')
+                );
+                
+                if (hasPlayingIndicators) {
+                  result.isPlaying = true;
+                  console.log('[YouTube] Playing detected via classes');
+                }
+              }
+            }
+            
+            // Method 3: Play/Pause Button State
+            if (!result.isPlaying) {
+              const playButton = document.querySelector('.ytp-play-button');
+              if (playButton) {
+                const ariaLabel = playButton.getAttribute('aria-label') || '';
+                const title = playButton.getAttribute('title') || '';
+                result.debug.playButtonState = { ariaLabel, title };
+                console.log('[YouTube] Play button state:', { ariaLabel, title });
+                
+                if (ariaLabel.toLowerCase().includes('pause') || title.toLowerCase().includes('pause')) {
+                  result.isPlaying = true;
+                  console.log('[YouTube] Playing detected via button state');
+                }
+              }
+            }
+            
+            // Method 4: Video Element Direct Check
+            if (!result.isPlaying) {
+              const videos = document.querySelectorAll('video');
+              console.log('[YouTube] Found video elements:', videos.length);
+              
+              for (let i = 0; i < videos.length; i++) {
+                const video = videos[i];
+                const isVideoPlaying = !video.paused && 
+                                     !video.ended && 
+                                     video.readyState >= 3 && 
+                                     video.currentTime > 0;
+                
+                console.log(\`[YouTube] Video \${i}:\`, {
+                  paused: video.paused,
+                  ended: video.ended,
+                  readyState: video.readyState,
+                  currentTime: video.currentTime,
+                  duration: video.duration,
+                  isPlaying: isVideoPlaying
+                });
+                
+                if (isVideoPlaying) {
+                  result.isPlaying = true;
+                  console.log('[YouTube] Playing detected via video element');
+                  break;
+                }
+              }
+            }
+            
+            // Get YouTube title
+            let titleElement = document.querySelector('h1.ytd-watch-metadata yt-formatted-string') ||
+                              document.querySelector('.ytp-title-link') ||
+                              document.querySelector('#container h1') ||
+                              document.querySelector('meta[property="og:title"]');
+            
+            if (titleElement) {
+              result.title = titleElement.textContent || titleElement.getAttribute('content') || '';
+            }
+            
+            if (!result.title) {
+              result.title = document.title || 'YouTube';
+            }
+          }
+          
+          // === General Media Element Detection ===
+          if (!result.isPlaying) {
+            const allMedia = document.querySelectorAll('video, audio');
+            result.debug.totalMediaElements = allMedia.length;
+            console.log('[Media] Found media elements:', allMedia.length);
+            
+            const playingMedia = [];
+            allMedia.forEach((media, index) => {
+              const isMediaPlaying = !media.paused && 
+                                   !media.ended && 
+                                   media.readyState >= 3 && 
+                                   media.currentTime > 0;
+              
+              console.log(\`[Media] Element \${index} (\${media.tagName}):\`, {
+                paused: media.paused,
+                ended: media.ended,
+                readyState: media.readyState,
+                currentTime: media.currentTime,
+                src: media.currentSrc || media.src,
+                isPlaying: isMediaPlaying
+              });
+              
+              if (isMediaPlaying) {
+                playingMedia.push(index);
+              }
+            });
+            
+            if (playingMedia.length > 0) {
+              result.isPlaying = true;
+              result.debug.playingMediaElements = playingMedia;
+              console.log('[Media] Playing media detected:', playingMedia);
+            }
+          }
+          
+          // === Web Audio API Detection ===
+          if (!result.isPlaying && window.__webAudioPlaying) {
+            result.isPlaying = true;
+            result.debug.webAudioActive = true;
+            console.log('[Audio] Web Audio API playing detected');
+          }
+          
+          // === Custom Media Element Tracking ===
+          if (!result.isPlaying && window.__mediaElementPlaying) {
+            result.isPlaying = true;
+            result.debug.customMediaTracking = true;
+            console.log('[Audio] Custom media tracking detected');
+          }
+          
+          // Fallback title
+          if (!result.title) {
+            result.title = document.title || 'Media';
+          }
+          
+          console.log('[Audio Detection] Final result:', result);
+          return result;
+        })()
+      `)
+
+      console.log(`[checkAudioState][${tabId}] Detection result:`, audioData)
+
+      if (audioData && typeof audioData === 'object') {
+        // Always update the audio state, even if not playing
+        // This ensures the store gets updated and we can track state changes
+        safeSetAudioState(tabId, {
+          isPlaying: audioData.isPlaying || false,
+          url: audioData.url || currentUrl,
+          title: audioData.title || 'Unknown'
+        })
+
+        // Additional logging for debugging
+        if (audioData.isPlaying) {
+          console.log(`[checkAudioState][${tabId}] 🎵 PLAYING DETECTED:`, {
+            title: audioData.title,
+            url: audioData.url,
+            debug: audioData.debug
+          })
+        } else {
+          console.log(`[checkAudioState][${tabId}] 🔇 Not playing`, audioData.debug)
+        }
+      } else {
+        console.warn(`[checkAudioState][${tabId}] Invalid audio data:`, audioData)
+      }
+    } catch (error) {
+      console.error(`[checkAudioState][${tabId}] Error:`, error)
+      // Clear audio state on error
+      clearAudioState(tabId)
+    }
+  }, [tabId, safeSetAudioState, clearAudioState, isValidUrl])
 
   // Register/unregister this webview with main process after DOM ready
   useEffect(() => {
@@ -125,11 +319,10 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
     return () => {
       isWebviewDestroyedRef.current = true
       el.removeEventListener('dom-ready', handleRegister)
-      // do not unregister here to allow fallback
     }
   }, [tabId, isElectron, activeTabId])
 
-  // Main update effect
+  // Main effect for handling webview events and audio detection
   useEffect(() => {
     if (!isElectron || !activeAccountId || !activeTabId) return
     const el = webviewRef.current
@@ -143,27 +336,204 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
     isWebviewDestroyedRef.current = false
     isInitializedRef.current = false
 
-    const handleDomReady = () => {
+    const handleDomReady = async () => {
       if (!el || isWebviewDestroyedRef.current) return
+
+      console.log(`[handleDomReady][${tabId}] DOM ready, injecting scripts...`)
+
+      // Enhanced injection with better YouTube support
+      try {
+        await el.executeJavaScript(`
+          (function() {
+            console.log('[Audio Injection] Starting enhanced injection...');
+            
+            // === YouTube Enhanced Tracking ===
+            if (window.location.hostname.includes('youtube.com')) {
+              console.log('[YouTube Injection] Setting up YouTube-specific tracking...');
+              
+              // Global YouTube state tracking
+              window.__youtubeState = {
+                isPlaying: false,
+                lastCheck: 0
+              };
+              
+              // Enhanced MutationObserver for YouTube
+              const ytObserver = new MutationObserver((mutations) => {
+                let shouldCheck = false;
+                
+                mutations.forEach((mutation) => {
+                  // Check for class changes on movie_player
+                  if (mutation.type === 'attributes' && 
+                      mutation.attributeName === 'class' &&
+                      mutation.target.id === 'movie_player') {
+                    shouldCheck = true;
+                  }
+                  
+                  // Check for button state changes
+                  if (mutation.target.classList?.contains('ytp-play-button')) {
+                    shouldCheck = true;
+                  }
+                });
+                
+                if (shouldCheck) {
+                  // Debounce checks
+                  const now = Date.now();
+                  if (now - window.__youtubeState.lastCheck > 500) {
+                    window.__youtubeState.lastCheck = now;
+                    
+                    // Check current state
+                    const moviePlayer = document.getElementById('movie_player');
+                    const playButton = document.querySelector('.ytp-play-button');
+                    
+                    if (moviePlayer && playButton) {
+                      const classes = Array.from(moviePlayer.classList);
+                      const buttonLabel = playButton.getAttribute('aria-label') || '';
+                      
+                      const isPlaying = !classes.includes('paused-mode') && 
+                                       !classes.includes('ended-mode') &&
+                                       (buttonLabel.includes('Pause') || classes.includes('playing-mode'));
+                      
+                      if (isPlaying !== window.__youtubeState.isPlaying) {
+                        window.__youtubeState.isPlaying = isPlaying;
+                        console.log('[YouTube Observer] State changed to:', isPlaying);
+                      }
+                    }
+                  }
+                }
+              });
+              
+              // Observe the entire player area
+              const playerContainer = document.getElementById('movie_player') || 
+                                    document.getElementById('player-container') ||
+                                    document.body;
+              
+              if (playerContainer) {
+                ytObserver.observe(playerContainer, {
+                  attributes: true,
+                  childList: true,
+                  subtree: true,
+                  attributeFilter: ['class', 'aria-label', 'title']
+                });
+                console.log('[YouTube Injection] Observer set up on:', playerContainer.id || 'body');
+              }
+            }
+            
+            // === Enhanced Web Audio API Tracking ===
+            if (!window.__audioContextPatched) {
+              console.log('[Audio Injection] Setting up Web Audio tracking...');
+              window.__audioContextPatched = true;
+              window.__webAudioPlaying = false;
+              
+              const originalAudioContext = window.AudioContext || window.webkitAudioContext;
+              if (originalAudioContext) {
+                window.AudioContext = function(...args) {
+                  const context = new originalAudioContext(...args);
+                  
+                  const originalResume = context.resume.bind(context);
+                  context.resume = function() {
+                    window.__webAudioPlaying = true;
+                    console.log('[Web Audio] Context resumed - playing');
+                    return originalResume();
+                  };
+                  
+                  const originalSuspend = context.suspend.bind(context);
+                  context.suspend = function() {
+                    window.__webAudioPlaying = false;
+                    console.log('[Web Audio] Context suspended - stopped');
+                    return originalSuspend();
+                  };
+                  
+                  return context;
+                };
+                
+                Object.setPrototypeOf(window.AudioContext, originalAudioContext);
+              }
+            }
+            
+            // === Media Element Event Tracking ===
+            window.__mediaElementPlaying = false;
+            
+            const trackMediaElement = (element) => {
+              const updateState = () => {
+                const isPlaying = !element.paused && 
+                               !element.ended && 
+                               element.readyState >= 3;
+                
+                if (isPlaying !== window.__mediaElementPlaying) {
+                  window.__mediaElementPlaying = isPlaying;
+                  console.log(\`[Media Element] \${element.tagName} state changed:\`, isPlaying);
+                }
+              };
+              
+              ['play', 'playing', 'pause', 'ended', 'waiting'].forEach(event => {
+                element.addEventListener(event, updateState);
+              });
+              
+              updateState(); // Initial check
+            };
+            
+            // Track existing media
+            document.querySelectorAll('video, audio').forEach(trackMediaElement);
+            
+            // Track new media elements
+            const mediaObserver = new MutationObserver((mutations) => {
+              mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                  if (node.nodeType === 1) {
+                    if (node.tagName === 'VIDEO' || node.tagName === 'AUDIO') {
+                      trackMediaElement(node);
+                    }
+                    const newMedia = node.querySelectorAll?.('video, audio') || [];
+                    newMedia.forEach(trackMediaElement);
+                  }
+                });
+              });
+            });
+            
+            mediaObserver.observe(document.body, { childList: true, subtree: true });
+            
+            console.log('[Audio Injection] Enhanced injection completed');
+          })();
+        `)
+
+        console.log(`[handleDomReady][${tabId}] Audio injection completed`)
+      } catch (err) {
+        console.error(`[handleDomReady][${tabId}] Audio injection failed:`, err)
+      }
+
+      // Handle URL updates and favicon
       setTimeout(() => {
         if (!el || isWebviewDestroyedRef.current) return
         const currentUrl = el.getURL()
         if (!currentUrl || !isValidUrl(currentUrl)) return
+
         const hostname = new URL(currentUrl).hostname
         safeUpdateTab(activeAccountId, activeTabId, {
           url: currentUrl,
           icon: `https://www.google.com/s2/favicons?domain=${hostname}`
         })
 
-        const match =
+        // Add PiP button for video sites
+        const isVideoSite =
           /youtube\.com/.test(currentUrl) || /\.(mp4|webm|ogg|mp3|wav)(\?.*)?$/.test(currentUrl)
 
-        if (match) {
+        if (isVideoSite) {
           el.insertCSS(
             `
-            #electron-pip-button { position: fixed; top: 16px; right: 16px; z-index: 9999; border-radius: 8px; background: rgba(255,255,255,0.8); border: none; padding: 8px; cursor: pointer; }
+            #electron-pip-button { 
+              position: fixed; 
+              top: 16px; 
+              right: 16px; 
+              z-index: 9999; 
+              border-radius: 8px; 
+              background: rgba(255,255,255,0.8); 
+              border: none; 
+              padding: 8px; 
+              cursor: pointer; 
+            }
           `
           ).catch(() => {})
+
           el.executeJavaScript(
             `
             (function() {
@@ -184,7 +554,8 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
         }
 
         isInitializedRef.current = true
-      }, 100)
+        console.log(`[handleDomReady][${tabId}] Initialization completed`)
+      }, 500)
     }
 
     const handleTitle = (e: Electron.PageTitleUpdatedEvent) => {
@@ -208,32 +579,6 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
       })
     }
 
-    const handleAudioState = async () => {
-      if (!el || isWebviewDestroyedRef.current || !isInitializedRef.current) return
-      const isPlaying = await getAudioState()
-      const currentUrl = el.getURL()
-      let currentTitle = 'Unknown'
-      try {
-        currentTitle = await el.executeJavaScript(`
-          (function() {
-            const ytTitle = document.querySelector('.ytp-title-link')?.textContent;
-            if (ytTitle) return ytTitle;
-            return document.title;
-          })()
-        `)
-      } catch (e) {
-        console.error('Error fetching title:', e)
-        currentTitle = el.getTitle() || 'Unknown'
-      }
-      if (currentUrl && isValidUrl(currentUrl)) {
-        safeSetAudioState(tabId, {
-          isPlaying,
-          url: currentUrl,
-          title: currentTitle
-        })
-      }
-    }
-
     const handleLoadFail = (e: Electron.DidFailLoadEvent) => {
       const ignoredCodes = [-3, -27, -105, -125]
       if (!ignoredCodes.includes(e.errorCode)) {
@@ -245,6 +590,8 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
       const reason = event.reason
       isWebviewDestroyedRef.current = true
       isInitializedRef.current = false
+      clearAudioState(tabId)
+
       const shouldReload = ['crashed', 'abnormal-exit', 'killed', 'oom'].includes(reason)
       if (shouldReload && el) {
         setTimeout(() => {
@@ -263,31 +610,39 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
     const handleNewWindow = (event: any) => {
       event.preventDefault()
       if (event.url && isValidUrl(event.url)) {
-        // Use PiP API to open external links
         window.api.pip.open(event.url)
       }
     }
 
-    const handleDidFailProvisionalLoad = (e: any) => {
-      const ignoredCodes = [-3, -27, -105, -125]
-      if (!ignoredCodes.includes(e.errorCode)) {
-        console.warn(`Provisional load failed (${e.errorCode}): ${e.validatedURL}`)
-      }
-    }
-
+    // Event listeners
     el.addEventListener('dom-ready', handleDomReady)
     el.addEventListener('page-title-updated', handleTitle)
     el.addEventListener('did-navigate', handleNavigate)
     el.addEventListener('did-navigate-in-page', handleNavigate)
     el.addEventListener('did-fail-load', handleLoadFail)
-    el.addEventListener('did-fail-provisional-load', handleDidFailProvisionalLoad)
     el.addEventListener('render-process-gone', handleRenderProcessGone)
     el.addEventListener('new-window', handleNewWindow)
 
-    audioIntervalRef.current && clearInterval(audioIntervalRef.current)
-    audioIntervalRef.current = setInterval(handleAudioState, 2000)
-    setTimeout(() => audioIntervalRef.current && clearInterval(audioIntervalRef.current), 1000)
+    // Start audio monitoring
+    if (audioIntervalRef.current) {
+      clearInterval(audioIntervalRef.current)
+    }
 
+    // Initial check after a delay
+    setTimeout(() => {
+      if (!isWebviewDestroyedRef.current) {
+        checkAudioState()
+      }
+    }, 2000)
+
+    // Regular monitoring
+    audioIntervalRef.current = setInterval(() => {
+      if (!isWebviewDestroyedRef.current && isInitializedRef.current) {
+        checkAudioState()
+      }
+    }, 1500)
+
+    // DevTools shortcut
     const handleF12 = (e: KeyboardEvent) => {
       if (e.key === 'F12' && webviewRef.current && !isWebviewDestroyedRef.current) {
         webviewRef.current.openDevTools()
@@ -301,16 +656,19 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
     return () => {
       isWebviewDestroyedRef.current = true
       isInitializedRef.current = false
+
       if (audioIntervalRef.current) {
         clearInterval(audioIntervalRef.current)
         audioIntervalRef.current = null
       }
+
+      clearAudioState(tabId)
+
       el.removeEventListener('dom-ready', handleDomReady)
       el.removeEventListener('page-title-updated', handleTitle)
       el.removeEventListener('did-navigate', handleNavigate)
       el.removeEventListener('did-navigate-in-page', handleNavigate)
       el.removeEventListener('did-fail-load', handleLoadFail)
-      el.removeEventListener('did-fail-provisional-load', handleDidFailProvisionalLoad)
       el.removeEventListener('render-process-gone', handleRenderProcessGone)
       el.removeEventListener('new-window', handleNewWindow)
       window.removeEventListener('keydown', handleF12)
@@ -322,10 +680,12 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
     tabId,
     safeUpdateTab,
     safeSetAudioState,
-    isValidUrl
+    clearAudioState,
+    isValidUrl,
+    checkAudioState
   ])
 
-  // cleanup unregister on unmount
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       accounts.forEach((acc) =>
@@ -333,8 +693,9 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
           window.api.chatgpt.unregisterWebview(t.id)
         })
       )
+      clearAudioState(tabId)
     }
-  }, [accounts])
+  }, [accounts, clearAudioState, tabId])
 
   if (isElectron && !mediaMode) {
     return (
@@ -353,7 +714,8 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
                   nodeintegration={false as any}
                   webpreferences="contextIsolation=true,nodeIntegration=false,enableRemoteModule=false"
                   ref={(node: Electron.WebviewTag | null) => {
-                    if (node && isElectron) {
+                    if (node && isElectron && tab.id === tabId) {
+                      webviewRef.current = node
                       try {
                         const wcId = node.getWebContentsId()
                         window.api.chatgpt.registerWebview(tab.id, wcId)
@@ -372,14 +734,7 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
           <webview
             id={`webview-${tabId}`}
             partition={'persist:default' as any}
-            ref={(node: Electron.WebviewTag | null) => {
-              if (node && isElectron) {
-                try {
-                  const wcId = node.getWebContentsId()
-                  window.api.chatgpt.registerWebview(tabId, wcId)
-                } catch {}
-              }
-            }}
+            ref={webviewRef}
             src={url}
             allowpopups={true as any}
             nodeintegration={false as any}
