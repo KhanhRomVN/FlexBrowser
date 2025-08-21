@@ -43,7 +43,6 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
     (tId: string, state: any) => {
       if (!isWebviewDestroyedRef.current) {
         try {
-          console.log(`[safeSetAudioState][${tId}] Setting state:`, state)
           setAudioState(tId, state)
         } catch (error) {
           console.warn('Error setting audio state:', error)
@@ -80,8 +79,6 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
         return
       }
 
-      console.log(`[checkAudioState][${tabId}] Checking URL:`, currentUrl)
-
       // Enhanced detection script with better YouTube support
       const audioData = await el.executeJavaScript(`
         (function() {
@@ -94,12 +91,9 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
               hostname: window.location.hostname
             }
           };
-          
-          console.log('[Audio Detection] Starting for:', window.location.hostname);
-          
+                    
           // === YouTube Specific Detection ===
           if (window.location.hostname.includes('youtube.com')) {
-            console.log('[YouTube] Detected YouTube page');
             
             // Method 1: YouTube Player API
             try {
@@ -107,10 +101,8 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
               if (ytPlayer && typeof ytPlayer.getPlayerState === 'function') {
                 const state = ytPlayer.getPlayerState();
                 result.debug.ytPlayerState = state;
-                console.log('[YouTube] YT Player state:', state);
                 if (state === 1) { // YT_PlayerState.PLAYING
                   result.isPlaying = true;
-                  console.log('[YouTube] Playing detected via API');
                 }
               } else {
                 result.debug.ytPlayerError = 'API not available';
@@ -125,7 +117,6 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
               if (moviePlayer) {
                 const classes = Array.from(moviePlayer.classList);
                 result.debug.moviePlayerClasses = classes;
-                console.log('[YouTube] Movie player classes:', classes);
                 
                 // Check for playing states
                 const hasPlayingIndicators = classes.some(cls => 
@@ -139,7 +130,6 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
                 
                 if (hasPlayingIndicators) {
                   result.isPlaying = true;
-                  console.log('[YouTube] Playing detected via classes');
                 }
               }
             }
@@ -151,11 +141,9 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
                 const ariaLabel = playButton.getAttribute('aria-label') || '';
                 const title = playButton.getAttribute('title') || '';
                 result.debug.playButtonState = { ariaLabel, title };
-                console.log('[YouTube] Play button state:', { ariaLabel, title });
                 
                 if (ariaLabel.toLowerCase().includes('pause') || title.toLowerCase().includes('pause')) {
                   result.isPlaying = true;
-                  console.log('[YouTube] Playing detected via button state');
                 }
               }
             }
@@ -163,7 +151,6 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
             // Method 4: Video Element Direct Check
             if (!result.isPlaying) {
               const videos = document.querySelectorAll('video');
-              console.log('[YouTube] Found video elements:', videos.length);
               
               for (let i = 0; i < videos.length; i++) {
                 const video = videos[i];
@@ -172,18 +159,8 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
                                      video.readyState >= 3 && 
                                      video.currentTime > 0;
                 
-                console.log(\`[YouTube] Video \${i}:\`, {
-                  paused: video.paused,
-                  ended: video.ended,
-                  readyState: video.readyState,
-                  currentTime: video.currentTime,
-                  duration: video.duration,
-                  isPlaying: isVideoPlaying
-                });
-                
                 if (isVideoPlaying) {
                   result.isPlaying = true;
-                  console.log('[YouTube] Playing detected via video element');
                   break;
                 }
               }
@@ -208,7 +185,6 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
           if (!result.isPlaying) {
             const allMedia = document.querySelectorAll('video, audio');
             result.debug.totalMediaElements = allMedia.length;
-            console.log('[Media] Found media elements:', allMedia.length);
             
             const playingMedia = [];
             allMedia.forEach((media, index) => {
@@ -216,15 +192,6 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
                                    !media.ended && 
                                    media.readyState >= 3 && 
                                    media.currentTime > 0;
-              
-              console.log(\`[Media] Element \${index} (\${media.tagName}):\`, {
-                paused: media.paused,
-                ended: media.ended,
-                readyState: media.readyState,
-                currentTime: media.currentTime,
-                src: media.currentSrc || media.src,
-                isPlaying: isMediaPlaying
-              });
               
               if (isMediaPlaying) {
                 playingMedia.push(index);
@@ -234,7 +201,6 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
             if (playingMedia.length > 0) {
               result.isPlaying = true;
               result.debug.playingMediaElements = playingMedia;
-              console.log('[Media] Playing media detected:', playingMedia);
             }
           }
           
@@ -242,14 +208,12 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
           if (!result.isPlaying && window.__webAudioPlaying) {
             result.isPlaying = true;
             result.debug.webAudioActive = true;
-            console.log('[Audio] Web Audio API playing detected');
           }
           
           // === Custom Media Element Tracking ===
           if (!result.isPlaying && window.__mediaElementPlaying) {
             result.isPlaying = true;
             result.debug.customMediaTracking = true;
-            console.log('[Audio] Custom media tracking detected');
           }
           
           // Fallback title
@@ -257,12 +221,9 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
             result.title = document.title || 'Media';
           }
           
-          console.log('[Audio Detection] Final result:', result);
           return result;
         })()
       `)
-
-      console.log(`[checkAudioState][${tabId}] Detection result:`, audioData)
 
       if (audioData && typeof audioData === 'object') {
         // Always update the audio state, even if not playing
@@ -272,17 +233,6 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
           url: audioData.url || currentUrl,
           title: audioData.title || 'Unknown'
         })
-
-        // Additional logging for debugging
-        if (audioData.isPlaying) {
-          console.log(`[checkAudioState][${tabId}] 🎵 PLAYING DETECTED:`, {
-            title: audioData.title,
-            url: audioData.url,
-            debug: audioData.debug
-          })
-        } else {
-          console.log(`[checkAudioState][${tabId}] 🔇 Not playing`, audioData.debug)
-        }
       } else {
         console.warn(`[checkAudioState][${tabId}] Invalid audio data:`, audioData)
       }
@@ -339,17 +289,13 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
     const handleDomReady = async () => {
       if (!el || isWebviewDestroyedRef.current) return
 
-      console.log(`[handleDomReady][${tabId}] DOM ready, injecting scripts...`)
-
       // Enhanced injection with better YouTube support
       try {
         await el.executeJavaScript(`
           (function() {
-            console.log('[Audio Injection] Starting enhanced injection...');
             
             // === YouTube Enhanced Tracking ===
             if (window.location.hostname.includes('youtube.com')) {
-              console.log('[YouTube Injection] Setting up YouTube-specific tracking...');
               
               // Global YouTube state tracking
               window.__youtubeState = {
@@ -395,7 +341,6 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
                       
                       if (isPlaying !== window.__youtubeState.isPlaying) {
                         window.__youtubeState.isPlaying = isPlaying;
-                        console.log('[YouTube Observer] State changed to:', isPlaying);
                       }
                     }
                   }
@@ -414,13 +359,11 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
                   subtree: true,
                   attributeFilter: ['class', 'aria-label', 'title']
                 });
-                console.log('[YouTube Injection] Observer set up on:', playerContainer.id || 'body');
               }
             }
             
             // === Enhanced Web Audio API Tracking ===
             if (!window.__audioContextPatched) {
-              console.log('[Audio Injection] Setting up Web Audio tracking...');
               window.__audioContextPatched = true;
               window.__webAudioPlaying = false;
               
@@ -432,14 +375,12 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
                   const originalResume = context.resume.bind(context);
                   context.resume = function() {
                     window.__webAudioPlaying = true;
-                    console.log('[Web Audio] Context resumed - playing');
                     return originalResume();
                   };
                   
                   const originalSuspend = context.suspend.bind(context);
                   context.suspend = function() {
                     window.__webAudioPlaying = false;
-                    console.log('[Web Audio] Context suspended - stopped');
                     return originalSuspend();
                   };
                   
@@ -461,7 +402,6 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
                 
                 if (isPlaying !== window.__mediaElementPlaying) {
                   window.__mediaElementPlaying = isPlaying;
-                  console.log(\`[Media Element] \${element.tagName} state changed:\`, isPlaying);
                 }
               };
               
@@ -491,12 +431,8 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
             });
             
             mediaObserver.observe(document.body, { childList: true, subtree: true });
-            
-            console.log('[Audio Injection] Enhanced injection completed');
           })();
         `)
-
-        console.log(`[handleDomReady][${tabId}] Audio injection completed`)
       } catch (err) {
         console.error(`[handleDomReady][${tabId}] Audio injection failed:`, err)
       }
@@ -554,7 +490,6 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
         }
 
         isInitializedRef.current = true
-        console.log(`[handleDomReady][${tabId}] Initialization completed`)
       }, 500)
     }
 

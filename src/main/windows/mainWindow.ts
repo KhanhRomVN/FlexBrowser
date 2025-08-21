@@ -59,17 +59,19 @@ export function createMainWindow(): void {
   if (is.dev && process.env.ELECTRON_RENDERER_URL) {
     win.loadURL(process.env.ELECTRON_RENDERER_URL as string)
 
-    win.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL, isMainFrame) => {
-      // Ignore aborted loads and retry main frame loads in dev
-      if (errorCode !== -3 && isMainFrame) {
-        console.log('Retrying dev server connection...')
-        setTimeout(() => {
-          if (!win.isDestroyed()) {
-            win.loadURL(process.env.ELECTRON_RENDERER_URL as string)
-          }
-        }, 1000)
+    win.webContents.on(
+      'did-fail-load',
+      (event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+        // Ignore aborted loads and retry main frame loads in dev
+        if (errorCode !== -3 && isMainFrame) {
+          setTimeout(() => {
+            if (!win.isDestroyed()) {
+              win.loadURL(process.env.ELECTRON_RENDERER_URL as string)
+            }
+          }, 1000)
+        }
       }
-    })
+    )
 
     win.webContents.on('did-finish-load', () => {
       if (!win.isDestroyed() && win.webContents && !win.webContents.isDestroyed()) {
@@ -82,24 +84,29 @@ export function createMainWindow(): void {
   }
 
   // Handle failed loads in main window with better error filtering
-  win.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL, isMainFrame) => {
-    if (win.isDestroyed() || !win.webContents || win.webContents.isDestroyed()) return
-    // Ignore common non-critical errors
-    const ignoredCodes = [-3, -27, -105, -125] // ERR_ABORTED, ERR_BLOCKED_BY_CLIENT, ERR_NAME_NOT_RESOLVED, ERR_NETWORK_CHANGED
+  win.webContents.on(
+    'did-fail-load',
+    (event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+      if (win.isDestroyed() || !win.webContents || win.webContents.isDestroyed()) return
+      // Ignore common non-critical errors
+      const ignoredCodes = [-3, -27, -105, -125] // ERR_ABORTED, ERR_BLOCKED_BY_CLIENT, ERR_NAME_NOT_RESOLVED, ERR_NETWORK_CHANGED
 
-    if (!ignoredCodes.includes(errorCode)) {
-      console.error(`MainWindow failed to load ${validatedURL}: ${errorDescription} (${errorCode})`)
+      if (!ignoredCodes.includes(errorCode)) {
+        console.error(
+          `MainWindow failed to load ${validatedURL}: ${errorDescription} (${errorCode})`
+        )
 
-      // For main frame failures in production, try to reload
-      if (isMainFrame && !is.dev) {
-        setTimeout(() => {
-          if (!win.isDestroyed()) {
-            win.reload()
-          }
-        }, 2000)
+        // For main frame failures in production, try to reload
+        if (isMainFrame && !is.dev) {
+          setTimeout(() => {
+            if (!win.isDestroyed()) {
+              win.reload()
+            }
+          }, 2000)
+        }
       }
     }
-  })
+  )
 
   // Use the newer render-process-gone event instead of deprecated 'crashed'
   win.webContents.on('render-process-gone', (event, details) => {
@@ -109,8 +116,6 @@ export function createMainWindow(): void {
     const { reason, exitCode } = details
 
     if (reason === 'crashed' || reason === 'abnormal-exit') {
-      console.log('Attempting to reload main window after crash')
-
       // Small delay before reload attempt
       setTimeout(() => {
         if (!win.isDestroyed()) {
@@ -134,10 +139,6 @@ export function createMainWindow(): void {
     console.warn('Main window became unresponsive')
   })
 
-  win.webContents.on('responsive', () => {
-    console.log('Main window became responsive again')
-  })
-
   // Handle certificate errors more gracefully
   win.webContents.on('certificate-error', (event, url, error, certificate, callback) => {
     // In development, you might want to ignore certificate errors for localhost
@@ -153,16 +154,13 @@ export function createMainWindow(): void {
 
   // Prevent navigation to external URLs in main window
   win.webContents.on('will-navigate', (event, navigationUrl) => {
-    const allowedOrigins = [
-      'file://',
-      'data:',
-    ]
+    const allowedOrigins = ['file://', 'data:']
 
     if (is.dev) {
       allowedOrigins.push('http://localhost:', 'http://127.0.0.1:')
     }
 
-    const isAllowed = allowedOrigins.some(origin => navigationUrl.startsWith(origin))
+    const isAllowed = allowedOrigins.some((origin) => navigationUrl.startsWith(origin))
 
     if (!isAllowed) {
       event.preventDefault()
@@ -177,10 +175,9 @@ export function createMainWindow(): void {
 
   win.on('ready-to-show', () => {
     if (!win.isDestroyed()) {
-      session.defaultSession.cookies.get({ domain: 'chatgpt.com' })
-        .catch((error) => {
-          console.error('[mainWindow] Failed to get cookies:', error);
-        });
+      session.defaultSession.cookies.get({ domain: 'chatgpt.com' }).catch((error) => {
+        console.error('[mainWindow] Failed to get cookies:', error)
+      })
       // Don't show immediately, let the app control when to show
     }
   })

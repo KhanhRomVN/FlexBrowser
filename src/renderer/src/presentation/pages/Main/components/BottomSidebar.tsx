@@ -64,9 +64,6 @@ const BottomSidebar: React.FC<BottomSidebarProps> = ({ onOpenCode }) => {
   const audioStates = useGlobalAudioStore((s) => s.audioStates)
   const clearAudioState = useGlobalAudioStore((s) => s.clearAudioState)
   const playingTabs = Object.entries(audioStates).filter(([_, s]) => s.isPlaying)
-  useEffect(() => {
-    console.log('[BottomSidebar] playingTabs:', playingTabs)
-  }, [playingTabs])
 
   const [showSettings, setShowSettings] = useState(false)
   const [showAddDialog, setShowAddDialog] = useState(false)

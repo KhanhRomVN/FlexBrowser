@@ -221,7 +221,6 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             <DropdownMenuItem
               className="px-2 py-1"
               onClick={() => {
-                console.log('[Renderer] DevTools menu click')
                 window.api.devtools.openWebview()
                 onOpenChange(false)
               }}

@@ -6,7 +6,6 @@ import { registerIpcHandlers } from './ipc-handlers'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 
 function handleProtocolURL(protocolUrl: string) {
-  console.log('[DeepLink] Handling protocol URL:', protocolUrl)
   try {
     const urlObj = new URL(protocolUrl)
     const token = urlObj.searchParams.get('token')
@@ -28,7 +27,6 @@ function handleProtocolURL(protocolUrl: string) {
   }
 }
 
-
 const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) {
   app.quit()
@@ -36,7 +34,7 @@ if (!gotLock) {
 }
 
 app.on('second-instance', (_event, argv) => {
-  const url = argv.find(arg => arg.startsWith('flexbrowser://auth'))
+  const url = argv.find((arg) => arg.startsWith('flexbrowser://auth'))
   if (url) {
     handleProtocolURL(url)
   }
@@ -58,7 +56,7 @@ app.whenReady().then(() => {
   // register custom protocol for deep-link OAuth callback
   app.setAsDefaultProtocolClient('flexbrowser')
   // Handle deep link on first instance launch
-  const initialUrl = process.argv.find(arg => arg.startsWith('flexbrowser://auth'))
+  const initialUrl = process.argv.find((arg) => arg.startsWith('flexbrowser://auth'))
   if (initialUrl) {
     handleProtocolURL(initialUrl)
   }

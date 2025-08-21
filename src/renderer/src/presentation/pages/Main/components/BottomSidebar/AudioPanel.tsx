@@ -29,18 +29,7 @@ const AudioPanel: React.FC<AudioPanelProps> = ({
   // Update timestamp when audio states change
   useEffect(() => {
     setLastUpdate(Date.now())
-    console.log('[AudioPanel][STATE_CHANGE] Audio states updated:', audioStates)
   }, [audioStates])
-
-  // Debug logging
-  useEffect(() => {
-    console.log('[AudioPanel][RENDER] Component rendered with:', {
-      playingTabsCount: playingTabs.length,
-      totalAudioStates: Object.keys(audioStates).length,
-      audioStates: audioStates,
-      playingTabs: playingTabs
-    })
-  }, [playingTabs, audioStates])
 
   const allAudioStates = Object.entries(audioStates)
   const playingStates = allAudioStates.filter(([_, state]) => state.isPlaying)
@@ -51,8 +40,6 @@ const AudioPanel: React.FC<AudioPanelProps> = ({
   useEffect(() => {
     const interval = setInterval(() => {
       const currentStates = useGlobalAudioStore.getState().audioStates
-      console.log('[AudioPanel][DEBUG_INTERVAL] Current audio states:', currentStates)
-      console.log('[AudioPanel][DEBUG_INTERVAL] Playing tabs prop:', playingTabs)
       setLastUpdate(Date.now())
     }, 3000)
 
@@ -60,20 +47,7 @@ const AudioPanel: React.FC<AudioPanelProps> = ({
   }, [playingTabs])
 
   return (
-    <Popover
-      onOpenChange={(open) => {
-        console.log('[AudioPanel] Popover opened:', open)
-        if (open) {
-          console.log('[AudioPanel][POPOVER_OPEN] Full state:', {
-            audioStates,
-            playingTabs,
-            playingStates,
-            totalTabs,
-            playingCount
-          })
-        }
-      }}
-    >
+    <Popover>
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
