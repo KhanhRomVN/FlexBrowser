@@ -18,7 +18,6 @@ interface MainMenuProps {
   onOpenDownloads?: () => void
   onOpenHistory?: () => void
   onOpenPasswords?: () => void
-  onOpenCode?: () => void
 }
 
 export const MainMenu: React.FC<MainMenuProps> = ({
@@ -26,8 +25,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onOpenChange,
   onOpenDownloads,
   onOpenHistory,
-  onOpenPasswords,
-  onOpenCode
+  onOpenPasswords
 }) => {
   const [view, setView] = useState<'main' | 'history'>('main')
   const { activeAccountId, accounts, updateAccount, addTab, setActiveTab } = useAccountStore()
@@ -70,7 +68,13 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   }
 
   return (
-    <DropdownMenu open={open} onOpenChange={onOpenChange}>
+    <DropdownMenu
+      open={open}
+      onOpenChange={(val) => {
+        if (view === 'history' && !val) return
+        onOpenChange(val)
+      }}
+    >
       <DropdownMenuTrigger asChild>
         <div />
       </DropdownMenuTrigger>
@@ -125,27 +129,6 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               }}
             >
               History
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="px-2 py-1"
-              onPointerDown={(e) => e.preventDefault()}
-              onClick={() => {
-                if (activeAccountId) {
-                  const newTabId = `${activeAccountId}-${window.crypto.randomUUID()}`
-                  addTab(activeAccountId, {
-                    id: newTabId,
-                    title: 'Code',
-                    url: `code://${newTabId}`,
-                    icon: '',
-                    messages: [],
-                    draft: ''
-                  })
-                  setActiveTab(activeAccountId, newTabId)
-                }
-                onOpenChange(false)
-              }}
-            >
-              Code
             </DropdownMenuItem>
             <DropdownMenuItem
               className="px-2 py-1"
@@ -221,6 +204,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             <DropdownMenuItem
               className="px-2 py-1"
               onClick={() => {
+                console.log('[Renderer] DevTools menu click')
                 window.api.devtools.openWebview()
                 onOpenChange(false)
               }}
@@ -247,13 +231,13 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               <DropdownMenuShortcut>Ctrl+Q</DropdownMenuShortcut>
             </DropdownMenuItem>
           </>
-        ) : view === 'history' ? (
+        ) : (
           <>
             <DropdownMenuLabel className="px-2 py-1 font-semibold">History</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <History />
           </>
-        ) : null}
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )

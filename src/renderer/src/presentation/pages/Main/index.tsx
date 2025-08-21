@@ -5,7 +5,6 @@ import type { Tab } from '../../../store/useAccountStore'
 import TabBar from './components/TabBar'
 import WebviewContainer from '../../../components/Container/WebviewContainer'
 import BottomSidebar from './components/BottomSidebar'
-import Code from './components/MainMenu/Code'
 import {
   Dialog,
   DialogContent,
@@ -129,12 +128,28 @@ const MainPage: React.FC = () => {
       id: newTabId,
       title: 'Bookmarks',
       url: defaultUrl,
-      icon: '',
-      messages: [],
-      draft: ''
+      icon: ''
     })
     setActiveTab(accountId, newTabId)
     setShowInit(false)
+
+    // Auto sign-in for non-guest users
+    if (!initGuest) {
+      setTimeout(() => {
+        window.api.auth
+          .loginGoogle(accountId)
+          .then(({ idToken, profile }) => {
+            updateAccount(accountId, {
+              isSignedIn: true,
+              idToken,
+              picture: profile.picture,
+              name: profile.name,
+              email: profile.email
+            })
+          })
+          .catch(console.error)
+      }, 1000)
+    }
   }
 
   const handleNewTab = () => {
@@ -144,9 +159,7 @@ const MainPage: React.FC = () => {
       id: newTabId,
       title: 'Bookmarks',
       url: defaultUrl,
-      icon: '',
-      messages: [],
-      draft: ''
+      icon: ''
     })
     setActiveTab(activeAccountId, newTabId)
   }
@@ -168,15 +181,8 @@ const MainPage: React.FC = () => {
 
   const tabs = accounts.find((acc) => acc.id === activeAccountId)?.tabs || []
   const activeTabId = accounts.find((acc) => acc.id === activeAccountId)?.activeTabId || ''
+  const activeUrl = tabs.find((t) => t.id === activeTabId)?.url || defaultUrl
 
-  useEffect(() => {
-    if (accounts.length === 0) return
-    const logInterval = setInterval(() => {
-      const activeAccount = accounts.find((acc) => acc.id === activeAccountId)
-      if (!activeAccount) return
-    }, 5000)
-    return () => clearInterval(logInterval)
-  }, [accounts, activeAccountId])
   // Show account creation dialog if no accounts
   if (showInit) {
     return (
@@ -213,7 +219,7 @@ const MainPage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col w-full h-screen bg-background">
+    <div className="flex flex-col w-full h-screen">
       <TabBar
         tabs={tabs}
         activeTabId={activeTabId}
@@ -224,18 +230,7 @@ const MainPage: React.FC = () => {
       />
 
       <div className="flex-1 h-full overflow-hidden relative">
-        {tabs.map((tab) => (
-          <div
-            key={tab.id}
-            className={`absolute inset-0 bg-background ${tab.id === activeTabId ? 'block' : 'hidden'}`}
-          >
-            {tab.url.startsWith('code://') ? (
-              <Code onClose={() => handleDeleteTab(tab.id)} />
-            ) : (
-              <WebviewContainer url={tab.url} isElectron={true} tabId={tab.id} />
-            )}
-          </div>
-        ))}
+        <WebviewContainer url={activeUrl} isElectron={true} tabId={activeTabId} />
       </div>
 
       <BottomSidebar />

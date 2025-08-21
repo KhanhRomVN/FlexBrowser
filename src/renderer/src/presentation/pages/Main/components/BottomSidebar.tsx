@@ -18,11 +18,7 @@ import { MainMenu } from './MainMenu'
 import AudioPanel from './BottomSidebar/AudioPanel'
 import { Input } from '../../../../components/ui/input'
 
-interface BottomSidebarProps {
-  onOpenCode?: () => void
-}
-
-const BottomSidebar: React.FC<BottomSidebarProps> = ({ onOpenCode }) => {
+const BottomSidebar: React.FC = () => {
   const {
     accounts,
     activeAccountId,
@@ -98,9 +94,7 @@ const BottomSidebar: React.FC<BottomSidebarProps> = ({ onOpenCode }) => {
       id: tabId,
       title: hostname,
       url,
-      icon: `https://www.google.com/s2/favicons?domain=${hostname}`,
-      messages: [],
-      draft: ''
+      icon: `https://www.google.com/s2/favicons?domain=${hostname}`
     })
     setActiveTab(id, tabId)
     setShowAddDialog(false)
@@ -126,81 +120,77 @@ const BottomSidebar: React.FC<BottomSidebarProps> = ({ onOpenCode }) => {
   }
 
   const openFullscreen = async (url: string, tabId: string) => {
-    try {
-      // Pause any playing media first
-      Object.keys(audioStates).forEach((tid) => pauseTab(tid))
-      const webview = document.getElementById(`webview-${tabId}`) as any
-      let currentTime = 0
-      // extract video source from webview for custom PiP
-      let mediaSrc = url
-      if (webview?.executeJavaScript) {
-        try {
-          const srcResult = await webview.executeJavaScript(`
-            (function() {
-              const v = document.querySelector('video');
-              return v ? (v.currentSrc || v.src) : null;
-            })();
-          `)
-          if (srcResult) mediaSrc = srcResult
-        } catch (e) {
-          console.error('Error fetching video src for PiP:', e)
-        }
-        try {
-          currentTime = await webview.executeJavaScript(`
-            (function() {
-              const vid = document.querySelector('video')
-              return vid ? vid.currentTime : 0
-            })();
-          `)
-        } catch (error) {
-          console.error('Error fetching currentTime for PiP:', error)
-        }
-      }
-      // Hide main window before entering PiP (builtin or custom)
-      // @ts-ignore
-      window.api.hide.main()
-
+    // Pause any playing media first
+    Object.keys(audioStates).forEach((tid) => pauseTab(tid))
+    const webview = document.getElementById(`webview-${tabId}`) as any
+    let currentTime = 0
+    // extract video source from webview for custom PiP
+    let mediaSrc = url
+    if (webview?.executeJavaScript) {
       try {
-        // Try built-in PiP first
-        const usedBuiltIn = await webview.executeJavaScript(`
-          (async () => {
-            const vid = document.querySelector("video");
-            if (!vid) return false;
-            vid.currentTime = ${currentTime};
-            await vid.play().catch(() => {});
-            if (vid.requestPictureInPicture) {
-              await vid.requestPictureInPicture().catch(() => {});
-              return true;
-            }
-            return false;
-          })()
+        const srcResult = await webview.executeJavaScript(`
+          (function() {
+            const v = document.querySelector('video');
+            return v ? (v.currentSrc || v.src) : null;
+          })();
         `)
-        // If built-in PiP succeeded, register exit handler and return
-        if (usedBuiltIn) {
-          // @ts-ignore
-          await webview.executeJavaScript(`
-            (function() {
-              const v = document.querySelector("video");
-              if (v && document.pictureInPictureEnabled) {
-                v.addEventListener("leavepictureinpicture", () => { window.api.show.main(); });
-              }
-            })();
-          `)
-          return
-        } else {
-          // Fallback to custom PiP window
-          window.api.hide.main()
-          // @ts-ignore
-          window.api.pip.open(mediaSrc, currentTime)
-        }
+        if (srcResult) mediaSrc = srcResult
+      } catch (e) {
+        console.error('Error fetching video src for PiP:', e)
+      }
+      try {
+        currentTime = await webview.executeJavaScript(`
+          (function() {
+            const vid = document.querySelector('video')
+            return vid ? vid.currentTime : 0
+          })();
+        `)
       } catch (error) {
-        console.error('PiP fullscreen failed:', error)
+        console.error('Error fetching currentTime for PiP:', error)
+      }
+    }
+    // Hide main window before entering PiP (builtin or custom)
+    // @ts-ignore
+    window.api.hide.main()
+
+    try {
+      // Try built-in PiP first
+      const usedBuiltIn = await webview.executeJavaScript(`
+        (async () => {
+          const vid = document.querySelector("video");
+          if (!vid) return false;
+          vid.currentTime = ${currentTime};
+          await vid.play().catch(() => {});
+          if (vid.requestPictureInPicture) {
+            await vid.requestPictureInPicture().catch(() => {});
+            return true;
+          }
+          return false;
+        })()
+      `)
+      // If built-in PiP succeeded, register exit handler and return
+      if (usedBuiltIn) {
+        // @ts-ignore
+        await webview.executeJavaScript(`
+          (function() {
+            const v = document.querySelector("video");
+            if (v && document.pictureInPictureEnabled) {
+              v.addEventListener("leavepictureinpicture", () => { window.api.show.main(); });
+            }
+          })();
+        `)
+        return
+      } else {
+        // Fallback to custom PiP window
         window.api.hide.main()
         // @ts-ignore
         window.api.pip.open(mediaSrc, currentTime)
       }
     } catch (error) {
-      console.error('Error in openFullscreen:', error)
+      console.error('PiP fullscreen failed:', error)
+      window.api.hide.main()
+      // @ts-ignore
+      window.api.pip.open(mediaSrc, currentTime)
     }
   }
   const [searchQuery, setSearchQuery] = useState('')
@@ -253,9 +243,7 @@ const BottomSidebar: React.FC<BottomSidebarProps> = ({ onOpenCode }) => {
         id: newTabId,
         title: trimmed,
         url: loadUrl,
-        icon: `https://www.google.com/s2/favicons?domain=${new URL(loadUrl).hostname}`,
-        messages: [],
-        draft: ''
+        icon: `https://www.google.com/s2/favicons?domain=${new URL(loadUrl).hostname}`
       })
       setActiveTab(acc.id, newTabId)
       targetTabId = newTabId
@@ -273,7 +261,6 @@ const BottomSidebar: React.FC<BottomSidebarProps> = ({ onOpenCode }) => {
         open={showMainMenu}
         onOpenChange={setShowMainMenu}
         onOpenDownloads={() => setShowDownloads(true)}
-        onOpenCode={onOpenCode}
         onOpenHistory={() => setShowHistory(true)}
         onOpenPasswords={() => setShowPasswords(true)}
       />

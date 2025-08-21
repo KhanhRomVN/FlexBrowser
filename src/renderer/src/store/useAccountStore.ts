@@ -6,40 +6,12 @@ const createCustomStorage = () => ({
   setItem: (name: string, value: string) => (window.api as any).storage.setItem(name, value),
   removeItem: (name: string) => (window.api as any).storage.removeItem(name)
 })
-// AI model definitions for Code feature
-export const AI_MODELS = [
-  { id: 'gpt-4', name: 'GPT-4', urlPattern: 'chat.openai.com' },
-  { id: 'chatgpt', name: 'ChatGPT', urlPattern: 'chatgpt.com' },
-  { id: 'claude-3', name: 'Claude 3', urlPattern: 'claude.ai' },
-  { id: 'deepseek', name: 'DeepSeek', urlPattern: 'chat.deepseek.com' },
-  { id: 'grok', name: 'Grok', urlPattern: 'x.com/grok' }
-];
-
-export const detectAIModel = (url: string): string | undefined => {
-  for (const model of AI_MODELS) {
-    if (url.includes(model.urlPattern)) {
-      return model.id;
-    }
-  }
-  return undefined;
-};
 
 export interface Tab {
   id: string
   title: string
   url: string
   icon: string
-  aiModel?: string
-  /** Chat messages history for this tab */
-  messages: {
-    id: string
-    role: 'user' | 'assistant'
-    content: string
-    model: string
-    timestamp: string
-  }[]
-  /** Current draft input for this tab */
-  draft: string
 }
 
 export interface Account {
@@ -111,17 +83,11 @@ const useAccountStore = create<AccountState>()(
         }),
 
       addTab: (accountId, tab) =>
-        set((state) => {
-          const aiModel = detectAIModel(tab.url);
-          const updatedTab = { ...tab, aiModel, messages: [], draft: '' };
-          return {
-            accounts: state.accounts.map((acc) =>
-              acc.id === accountId
-                ? { ...acc, tabs: [...acc.tabs, updatedTab] }
-                : acc
-            )
-          };
-        }),
+        set((state) => ({
+          accounts: state.accounts.map((acc) =>
+            acc.id === accountId ? { ...acc, tabs: [...acc.tabs, tab] } : acc
+          )
+        })),
 
       setActiveTab: (accountId, tabId) =>
         set((state) => ({
@@ -173,7 +139,14 @@ const useAccountStore = create<AccountState>()(
       name: 'account_store',
       storage: createJSONStorage(createCustomStorage),
       partialize: (state) => ({
-        accounts: state.accounts.filter((acc) => !acc.guest),
+        // Keep non-guest accounts and re-sync Google session for signed-in accounts
+        accounts: state.accounts.filter((acc) => {
+          if (acc.isSignedIn && acc.idToken) {
+            // Sync Google session cookie when restoring signed-in accounts
+            window.api.session.syncGoogle(acc.idToken)
+          }
+          return !acc.guest
+        }),
         activeAccountId: state.activeAccountId
       })
     }

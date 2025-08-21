@@ -10,40 +10,21 @@ type AudioStore = {
   audioStates: Record<string, AudioState>
   setAudioState: (tabId: string, state: AudioState) => void
   clearAudioState: (tabId: string) => void
-  clearAllAudioStates: () => void
-  getPlayingTabs: () => [string, AudioState][]
 }
 
-export const useGlobalAudioStore = create<AudioStore>((set, get) => ({
+export const useGlobalAudioStore = create<AudioStore>((set) => ({
   audioStates: {},
-
-  setAudioState: (tabId: string, state: AudioState) => {
-    set((prev) => {
-      const newStates = {
+  setAudioState: (tabId: string, state: AudioState) =>
+    set((prev) => ({
+      audioStates: {
         ...prev.audioStates,
         [tabId]: state
       }
-
-      return { audioStates: newStates }
-    })
-  },
-
-  clearAudioState: (tabId: string) => {
+    })),
+  clearAudioState: (tabId: string) =>
     set((prev) => {
       const newStates = { ...prev.audioStates }
       delete newStates[tabId]
-
       return { audioStates: newStates }
     })
-  },
-
-  clearAllAudioStates: () => {
-    set({ audioStates: {} })
-  },
-
-  getPlayingTabs: () => {
-    const states = get().audioStates
-    const playing = Object.entries(states).filter(([_, state]) => state.isPlaying)
-    return playing
-  }
 }))

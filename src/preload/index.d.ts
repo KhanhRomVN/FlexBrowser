@@ -61,17 +61,6 @@ declare global {
         setItem(key: string, value: string): Promise<unknown>
         removeItem(key: string): Promise<unknown>
       }
-      chatgpt: {
-        /** Ask ChatGPT with optional idToken for session sync */
-        ask(prompt: string, idToken?: string): Promise<{ success: boolean; response: string; error?: string }>
-        syncSession(idToken?: string): Promise<{ success: boolean }>
-        /** Ask via existing ChatGPT tab */
-        askViaTab(tabId: string, prompt: string, accountId: string): Promise<{ success: boolean; response?: string; error?: string }>
-        /** Register a WebView for a tab */
-        registerWebview(tabId: string, webContentsId: number): Promise<{ success: boolean }>
-        /** Unregister a WebView for a tab */
-        unregisterWebview(tabId: string): Promise<{ success: boolean }>
-      }
       getPath(name: string): string
       shell: {
         /** Open URL in external system browser */

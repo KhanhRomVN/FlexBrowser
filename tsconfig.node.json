@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "types": ["jest", "node"],
     "target": "ES2022",
     "lib": ["ES2023"],
     "module": "ESNext",
@@ -12,15 +11,12 @@
     "isolatedModules": true,
     "moduleDetection": "force",
     "noEmit": true,
-    // Enable default imports for commonjs modules
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
 
-    /* Linting */
+  /* Linting */
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["electron.vite.config.ts", "src/main/**/*.test.ts"]
+  "include": ["electron.vite.config.ts"]
 }
