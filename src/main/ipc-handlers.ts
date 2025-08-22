@@ -1,18 +1,17 @@
 import { app, ipcMain, BrowserWindow, shell, session } from 'electron'
 
 // Lazy-load a single persistent electron-store instance
-const storePromise = import('electron-store').then(({ default: Store }) =>
-  new Store({ cwd: app.getPath('userData'), name: 'account_store' })
+const storePromise = import('electron-store').then(
+  ({ default: Store }) => new Store({ cwd: app.getPath('userData'), name: 'account_store' })
 )
 import { openPipWindow } from './windows/pipWindow'
 import { getMainWindow } from './windows/mainWindow'
-
 
 /**
  * Register all IPC handlers for the main process.
  */
 export function registerIpcHandlers(): void {
-  ipcMain.on('ping', () => { })
+  ipcMain.on('ping', () => {})
 
   ipcMain.handle('open-pip-window', async (_event, url: string, currentTime?: number) => {
     await openPipWindow(url, currentTime)
@@ -66,11 +65,11 @@ export function registerIpcHandlers(): void {
   // Google session sync handlers
   ipcMain.handle('sync-google-session', (_event, idToken: string) => {
     // Optional: sync session cookies here
-    return null;
+    return null
   })
   ipcMain.handle('clear-google-session', async () => {
-    await session.defaultSession.clearStorageData({ storages: ['cookies'] });
-    return null;
+    await session.defaultSession.clearStorageData({ storages: ['cookies'] })
+    return null
   })
 
   ipcMain.handle('app-quit', () => {

@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react'
 import '../../../styles.css'
 import useAccountStore from '../../../store/useAccountStore'
 import type { Tab } from '../../../store/useAccountStore'
-import TabBar from './components/TabBar'
 import WebviewContainer from '../../../components/Container/WebviewContainer'
 import BottomSidebar from './components/BottomSidebar'
 import {
@@ -220,15 +219,6 @@ const MainPage: React.FC = () => {
 
   return (
     <div className="flex flex-col w-full h-screen">
-      <TabBar
-        tabs={tabs}
-        activeTabId={activeTabId}
-        onTabChange={handleTabChange}
-        onDeleteTab={handleDeleteTab}
-        onNewTab={handleNewTab}
-        onReorder={handleReorderTabs}
-      />
-
       <div className="flex-1 h-full overflow-hidden relative">
         <WebviewContainer url={activeUrl} isElectron={true} tabId={activeTabId} />
       </div>

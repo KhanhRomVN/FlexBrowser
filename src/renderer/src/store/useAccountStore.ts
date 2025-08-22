@@ -123,9 +123,9 @@ const useAccountStore = create<AccountState>()(
           accounts: state.accounts.map((acc) =>
             acc.id === accountId
               ? {
-                ...acc,
-                tabs: acc.tabs.map((t) => (t.id === tabId ? { ...t, ...updates } : t))
-              }
+                  ...acc,
+                  tabs: acc.tabs.map((t) => (t.id === tabId ? { ...t, ...updates } : t))
+                }
               : acc
           )
         })),

@@ -27,7 +27,7 @@ if (!gotLock) {
 }
 
 app.on('second-instance', (_event, argv) => {
-  const url = argv.find(arg => arg.startsWith('flexbrowser://auth'))
+  const url = argv.find((arg) => arg.startsWith('flexbrowser://auth'))
   if (url) {
     handleProtocolURL(url)
   }
@@ -44,7 +44,7 @@ app.whenReady().then(() => {
   // register custom protocol for deep-link OAuth callback
   app.setAsDefaultProtocolClient('flexbrowser')
   // Handle deep link on first instance launch
-  const initialUrl = process.argv.find(arg => arg.startsWith('flexbrowser://auth'))
+  const initialUrl = process.argv.find((arg) => arg.startsWith('flexbrowser://auth'))
   if (initialUrl) {
     handleProtocolURL(initialUrl)
   }

@@ -3,7 +3,8 @@ import { electronAPI } from '@electron-toolkit/preload'
 import { Buffer } from 'buffer'
 
 // Custom APIs for renderer
-const OAUTH_BASE_URL = process.env.ENV === 'DEV' ? 'http://localhost:5173' : 'https://flex-oauth.vercel.app';
+const OAUTH_BASE_URL =
+  process.env.ENV === 'DEV' ? 'http://localhost:5173' : 'https://flex-oauth.vercel.app'
 
 const api = {
   app: {
@@ -41,7 +42,10 @@ const api = {
       const oauthUrl = `${OAUTH_BASE_URL}/sign-in?accountId=${accountId}`
       // Open OAuth URL in external system browser
       ipcRenderer.invoke('open-external', oauthUrl)
-      return new Promise<{ idToken: string; profile: { name: string; email?: string; picture?: string } }>((resolve) => {
+      return new Promise<{
+        idToken: string
+        profile: { name: string; email?: string; picture?: string }
+      }>((resolve) => {
         ipcRenderer.once('oauth-token', (_event, token: string) => {
           // Decode JWT payload to extract user profile
           const profileData: { name: string; email?: string; picture?: string } = {
@@ -63,7 +67,9 @@ const api = {
     },
     /** Listen for OAuth token from main process */
     onOauthToken: (callback: (token: string, accountId?: string) => void) => {
-      ipcRenderer.on('oauth-token', (_event, token: string, accountId?: string) => callback(token, accountId))
+      ipcRenderer.on('oauth-token', (_event, token: string, accountId?: string) =>
+        callback(token, accountId)
+      )
     },
     logoutGoogle: (_accountId: string) => ipcRenderer.invoke('clear-google-session'),
     /** Base URL for embedded OAuth */
@@ -72,7 +78,9 @@ const api = {
   /** DevTools control */
   devtools: {
     /** Open DevTools for the main window */
-    open: () => { ipcRenderer.send('devtools-open') },
+    open: () => {
+      ipcRenderer.send('devtools-open')
+    },
     /** Emit event to open DevTools for the WebView */
     openWebview: () => {
       window.dispatchEvent(new CustomEvent('open-webview-devtools'))
@@ -85,9 +93,9 @@ const api = {
   storage: {
     /** Get item as JSON string or null */
     getItem: (key: string): Promise<string | null> =>
-      ipcRenderer.invoke('storage:get', key).then((val) =>
-        val === undefined ? null : JSON.stringify(val)
-      ),
+      ipcRenderer
+        .invoke('storage:get', key)
+        .then((val) => (val === undefined ? null : JSON.stringify(val))),
     /** Set item by parsing JSON string */
     setItem: (key: string, value: string): Promise<unknown> => {
       let parsed: unknown
@@ -99,8 +107,7 @@ const api = {
       return ipcRenderer.invoke('storage:set', key, parsed)
     },
     /** Remove item */
-    removeItem: (key: string): Promise<unknown> =>
-      ipcRenderer.invoke('storage:remove', key)
+    removeItem: (key: string): Promise<unknown> => ipcRenderer.invoke('storage:remove', key)
   },
   getPath: (name: string) => ipcRenderer.sendSync('get-path', name),
   moveWindow: (x: number, y: number) => ipcRenderer.send('move-pip-window', x, y),
